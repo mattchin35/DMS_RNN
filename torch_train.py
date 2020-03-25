@@ -92,7 +92,8 @@ def train(modelConfig, reload, set_seed=True):
 
             for t in range(x.shape[1]):
                 xt = torch.Tensor(x[:,t,:])
-                yt = torch.Tensor(y[:,t,:])
+                # yt = torch.Tensor(y[:,t,:])
+                yt = torch.argmax(y[:,t,:], dim=1)
                 hidden, out = net(xt, hidden)
                 if t >= t_loss_start and t <= t_loss_end:
                     loss_activity += opts.activity_alpha * torch.mean(torch.pow(hidden,2))
