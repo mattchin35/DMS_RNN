@@ -39,13 +39,14 @@ class oneLayerModelConfig(inputConfig):
         self.activity_alpha = .1
 
         self.tau = 0.1  # neuronal time constant
+        self.noise = 0.05  # external noise on each timestep
         self.decay = True
         self.testing = False
         self.load_checkpoint = False
 
         self.learning_rate = .001
         self.batch_size = 20
-        self.test_batch_size = 1000
+        self.test_batch_size = 100
         self.epoch = 200
         self.time_loss_start = 5
         self.time_loss_end = 20
@@ -77,7 +78,7 @@ class constrainedModelConfig(oneLayerModelConfig):
 class EIModelConfig(oneLayerModelConfig):
     def __init__(self):
         super(EIModelConfig, self).__init__()
-        self.percent_E = .6
+        self.percent_E = .8
 
 
 class interneuronModelConfig(threeLayerModelConfig):

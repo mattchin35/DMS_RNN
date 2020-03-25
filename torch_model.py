@@ -18,6 +18,7 @@ class Abstract_Model(nn.Module):
             os.makedirs(save_path)
         self.save_path = save_path
         self.model_config = None
+        self.log_softmax = torch.nn.LogSoftmax()
 
     def save(self, name='model', epoch=None):
         save_path = self.save_path
@@ -82,9 +83,63 @@ class Simple_Model(Abstract_Model):
         i = self.i2h(input)
         h_effective = torch.mul(self.h_w, self.h_mask)
         h = torch.matmul(hidden, h_effective)
+        noise = self.config.noise * torch.normal(0, 1, size=hidden.shape)
         hidden = hidden * (1.- self.config.dt / self.config.tau) + \
-                 torch.relu(i + h + self.h_b) * self.config.dt / self.config.tau
+                 torch.relu(i + h + self.h_b + noise) * self.config.dt / self.config.tau
         out = self.h2o(hidden)
+        return hidden, out
+
+    def initialZeroState(self):
+        return torch.zeros(self.batch_size, self.hidden_size)
+
+
+class EI_Model(Abstract_Model):
+    def __init__(self, opts, isize, osize):
+        super(EI_Model, self).__init__(opts.save_path)
+
+        self.hidden_size = opts.rnn_size
+        self.batch_size = opts.batch_size
+        self.config = opts
+
+        self.i2h = torch.nn.Parameter(.01 * torch.rand(isize, opts.rnn_size))
+
+        target = 2
+        alpha = 2
+        nE = int(opts.rnn_size * opts.percent_E)
+        nI = opts.rnn_size - nE
+        E = np.random.gamma(shape=alpha, scale=target / (nE * alpha), size=[nE, opts.rnn_size])
+        I = np.random.gamma(shape=alpha, scale=target / (nI * alpha), size=[nI, opts.rnn_size])
+        EI = np.concatenate([E, I], axis=0).astype(np.float32)
+        self.h_w = torch.nn.Parameter(torch.from_numpy(EI))
+        self.h_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
+
+        ei_mask = np.eye(opts.rnn_size).astype(np.float32)
+        ei_mask[nE:] *= -1
+        self.ei_mask = torch.nn.Parameter(torch.from_numpy(ei_mask), requires_grad=False)
+
+        mask = np.ones((opts.rnn_size, opts.rnn_size)).astype(np.float32)
+        np.fill_diagonal(mask, 0)
+        mask = torch.from_numpy(mask)
+        h_mask = torch.nn.Parameter(mask, requires_grad=False)
+        self.h_mask = h_mask
+
+        self.h2o_w = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, osize))
+        self.h2o_b = torch.nn.Parameter(.01 * torch.rand(osize))
+
+    def forward(self, input, hidden):
+        i = torch.matmul(input, torch.abs(self.i2h))
+
+        _h_effective = torch.abs(torch.mul(self.h_w, self.h_mask))
+        h_effective = torch.matmul(self.ei_mask, _h_effective)
+
+        h = torch.matmul(hidden, h_effective)
+        noise = self.config.noise * torch.normal(0, 1, size=hidden.shape)
+        hidden = torch.relu(i + h + self.h_b + noise)
+        hidden = hidden * (1. - self.config.dt / self.config.tau) + \
+                 torch.relu(i + h + self.h_b + noise) * self.config.dt / self.config.tau
+
+        h2o_effective = torch.matmul(self.ei_mask, torch.abs(self.h2o_w))
+        out = torch.matmul(hidden, h2o_effective) + self.h2o_b
         return hidden, out
 
     def initialZeroState(self):
@@ -189,54 +244,6 @@ class Constrained_Model(Abstract_Model):
         return torch.zeros(self.batch_size, self.hidden_size)
 
 
-class EI_Model(Abstract_Model):
-    def __init__(self, opts, isize, osize):
-        super(EI_Model, self).__init__(opts.save_path)
-
-        self.hidden_size = opts.rnn_size
-        self.batch_size = opts.batch_size
-        self.config = opts
-
-        self.i2h = torch.nn.Parameter(.01 * torch.rand(isize, opts.rnn_size))
-
-        target = 2
-        alpha = 2
-        nE = int(opts.rnn_size * opts.percent_E)
-        nI = opts.rnn_size - nE
-        E = np.random.gamma(shape=alpha, scale=target / (nE * alpha), size=[nE, opts.rnn_size])
-        I = np.random.gamma(shape=alpha, scale=target / (nI * alpha), size=[nI, opts.rnn_size])
-        EI = np.concatenate([E, I], axis=0).astype(np.float32)
-        self.h_w = torch.nn.Parameter(torch.from_numpy(EI))
-        self.h_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-
-        ei_mask = np.eye(opts.rnn_size).astype(np.float32)
-        ei_mask[nE:] *= -1
-        self.ei_mask = torch.nn.Parameter(torch.from_numpy(ei_mask), requires_grad=False)
-
-        mask = np.ones((opts.rnn_size, opts.rnn_size)).astype(np.float32)
-        np.fill_diagonal(mask, 0)
-        mask = torch.from_numpy(mask)
-        h_mask = torch.nn.Parameter(mask, requires_grad=False)
-        self.h_mask = h_mask
-
-        self.h2o_w = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, osize))
-        self.h2o_b = torch.nn.Parameter(.01 * torch.rand(osize))
-
-    def forward(self, input, hidden):
-        i = torch.matmul(input, torch.abs(self.i2h))
-
-        _h_effective = torch.abs(torch.mul(self.h_w, self.h_mask))
-        h_effective = torch.matmul(self.ei_mask, _h_effective)
-
-        h = torch.matmul(hidden, h_effective)
-        hidden = torch.relu(i + h + self.h_b)
-
-        h2o_effective = torch.matmul(self.ei_mask, torch.abs(self.h2o_w))
-        out = torch.matmul(hidden, h2o_effective) + self.h2o_b
-        return hidden, out
-
-    def initialZeroState(self):
-        return torch.zeros(self.batch_size, self.hidden_size)
 
 
 def load_config(save_path, name, epoch=None):

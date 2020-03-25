@@ -81,7 +81,8 @@ def train(modelConfig, reload, set_seed=True):
     total_time = 0
     net.save('net', 0)
     for ep in range(n_epoch):
-        criterion = torch.nn.MSELoss()
+        # criterion = torch.nn.MSELoss()
+        criterion = torch.nn.CrossEntropyLoss()
         for x, y in data_loader:
             hidden = net.initialZeroState()
             optimizer.zero_grad()
