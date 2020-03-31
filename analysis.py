@@ -53,9 +53,9 @@ def plot_activity():
     pass
 
 
-def analyze_simple_network(opts, eval=False):
-    paths = opts.save_path.split('/')[2:]
-    plot_path = '/'.join(['./_FIGURES'] + paths)
+def analyze_simple_network(opts, plot_path, eval=False):
+    # paths = opts.save_path.split('/')[2:]
+    # plot_path = '/'.join(['./_FIGURES'] + paths)
 
     opts, data_loader, net = torch_train._initialize(opts, reload=True, set_seed=False)
     if eval:
@@ -70,7 +70,8 @@ def analyze_simple_network(opts, eval=False):
 
 
 if __name__ == '__main__':
-    save_path = './_DATA/'
-    opts = torch_model.load_config(save_path, 200)
+    save_path = './_DATA/one_layer'
+    plot_path = './_FIGURES/one_layer'
+    opts = torch_model.load_config(save_path)
     opts.save_path = save_path
-    analyze_simple_network(opts)
+    analyze_simple_network(opts, plot_path)
