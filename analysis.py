@@ -42,7 +42,7 @@ def plot_performance(data_dict, trial_type, plot_path):
     # output = sp.special.softmax(output, axis=2)
 
     # find a trial for each trial type
-    ix = [np.nonzero(trial_type == i)[i] for i in range(4)]
+    ix = [np.nonzero(trial_type == i)[0] for i in range(4)]
     data = [(output[i], labels[i]) for i in ix]
 
     plot_name = 'performance'
