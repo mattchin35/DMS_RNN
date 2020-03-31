@@ -83,7 +83,7 @@ class Simple_Model(Abstract_Model):
         i = self.i2h(input)
         h_effective = torch.mul(self.h_w, self.h_mask)
         h = torch.matmul(hidden, h_effective)
-        noise = self.config.noise * torch.normal(0, 1, size=hidden.shape)
+        noise = self.config.noise * torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
         hidden = hidden * (1.- self.config.dt / self.config.tau) + \
                  torch.relu(i + h + self.h_b + noise) * self.config.dt / self.config.tau
         out = self.h2o(hidden)
@@ -133,7 +133,7 @@ class EI_Model(Abstract_Model):
         h_effective = torch.matmul(self.ei_mask, _h_effective)
 
         h = torch.matmul(hidden, h_effective)
-        noise = self.config.noise * torch.normal(0, 1, size=hidden.shape)
+        noise = self.config.noise * torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
         hidden = torch.relu(i + h + self.h_b + noise)
         hidden = hidden * (1. - self.config.dt / self.config.tau) + \
                  torch.relu(i + h + self.h_b + noise) * self.config.dt / self.config.tau
@@ -246,11 +246,11 @@ class Constrained_Model(Abstract_Model):
 
 
 
-def load_config(save_path, name, epoch=None):
+def load_config(save_path, epoch=None):
     if epoch is not None:
         save_path = os.path.join(save_path, 'epoch', str(epoch).zfill(4))
 
-    with open(os.path.join(save_path, name), 'r') as f:
+    with open(os.path.join(save_path, 'net'), 'r') as f:
         config_dict = json.load(f)
 
     c = config.modelConfig()
