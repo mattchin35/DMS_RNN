@@ -250,7 +250,7 @@ def load_config(save_path, epoch=None):
     if epoch is not None:
         save_path = os.path.join(save_path, 'epoch', str(epoch).zfill(4))
 
-    with open(os.path.join(save_path, 'net'), 'r') as f:
+    with open(os.path.join(save_path, 'net.pth'), 'r') as f:
         config_dict = json.load(f)
 
     c = config.modelConfig()
