@@ -38,11 +38,11 @@ def get_data(opts, eval):
 
 
 def plot_performance(data_dict, trial_type, plot_path):
-    labels, output = data_dict['y'], data_dict['yout']
+    labels, output = data_dict['y'], data_dict['y_out']
     # output = sp.special.softmax(output, axis=2)
 
     # find a trial for each trial type
-    ix = [np.nonzero(trial_type == i)[0] for i in range(4)]
+    ix = [np.nonzero(trial_type == i)[0][0] for i in range(4)]
     data = [(output[i], labels[i]) for i in ix]
 
     plot_name = 'performance'
@@ -54,6 +54,8 @@ def plot_activity():
 
 
 def analyze_simple_network(opts, plot_path, eval=False):
+    if not os.path.exists(plot_path):
+        os.mkdir(plot_path)
     # paths = opts.save_path.split('/')[2:]
     # plot_path = '/'.join(['./_FIGURES'] + paths)
 
