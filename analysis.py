@@ -43,10 +43,10 @@ def plot_performance(data_dict, trial_type, plot_path):
 
     # find a trial for each trial type
     ix = [np.nonzero(trial_type == i)[0][0] for i in range(4)]
-    data = [(output[i], labels[i]) for i in ix]
+    data = [(np.argmax(output[i], axis=1), np.argmax(labels[i], axis=1)) for i in ix]
 
     plot_name = 'performance'
-    utils.subplot_easy(data, 10, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'), ax_op=['tight'], tight_layout=True, linewidth=.5, hide_ticks=True)
+    utils.subplot_easy(data, 4, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'), ax_op=['tight'], tight_layout=True, linewidth=.5, hide_ticks=True)
 
 
 def plot_activity():
