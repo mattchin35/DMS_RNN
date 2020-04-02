@@ -83,6 +83,7 @@ class constrainedModelConfig(oneLayerModelConfig):
 class EIModelConfig(oneLayerModelConfig):
     def __init__(self):
         super(EIModelConfig, self).__init__()
+        self.rnn_size = 200
         self.percent_E = .8
         self.mode = 'EI'
 
