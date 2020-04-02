@@ -62,6 +62,15 @@ class oneLayerModelConfig(inputConfig):
         self.debug_weights = False
 
 
+class EIModelConfig(oneLayerModelConfig):
+    def __init__(self):
+        super(EIModelConfig, self).__init__()
+        self.rnn_size = 200
+        self.percent_E = .8
+        self.save_path = './_DATA/EI'
+        self.mode = 'EI'
+
+
 class threeLayerModelConfig(oneLayerModelConfig):
     def __init__(self):
         super(threeLayerModelConfig, self).__init__()
@@ -78,14 +87,6 @@ class constrainedModelConfig(oneLayerModelConfig):
         self.alm_size = 20
         self.save_path = './_DATA/constrained'
         self.mode = 'constrained'
-
-
-class EIModelConfig(oneLayerModelConfig):
-    def __init__(self):
-        super(EIModelConfig, self).__init__()
-        self.rnn_size = 200
-        self.percent_E = .8
-        self.mode = 'EI'
 
 
 class interneuronModelConfig(threeLayerModelConfig):

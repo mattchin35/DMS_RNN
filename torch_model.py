@@ -245,7 +245,6 @@ class Constrained_Model(Abstract_Model):
 
 
 
-
 def load_config(save_path, mode, epoch=None):
     if epoch is not None:
         save_path = os.path.join(save_path, 'epoch', str(epoch).zfill(4))

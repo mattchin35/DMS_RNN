@@ -49,7 +49,11 @@ def _initialize(opts, reload, set_seed, test=False):
 
     dataset = InputDataset(opts)
     data_loader = DataLoader(dataset, batch_size=opts.batch_size, shuffle=True)
-    net = torch_model.Simple_Model(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
+    if opts.mode == 'one_layer':
+        net = torch_model.Simple_Model(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
+    elif opts.mode == 'EI':
+        net = torch_model.EI_Model(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
+
     net.model_config = opts
 
     if reload:
@@ -141,7 +145,6 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
             print("Saving files...")
             net.save('net', cnt)
             net.save('net')
-
 
 
 def evaluate(modelConfig, log):

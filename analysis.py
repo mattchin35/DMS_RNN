@@ -19,8 +19,11 @@ def get_weights(net, opts):
     for name, param in net.named_parameters():
         weight_dict[name] = torch2numpy(param)
 
+    weight_dict['h_w'] = weight_dict['h_w'] * weight_dict['h_mask']
+
     if opts.mode == 'EI':
         ei_mask = weight_dict['ei_mask']
+
         weight_dict['h_w'] = np.matmul(ei_mask, np.abs(weight_dict['h_w']))
         weight_dict['i2h'] = np.abs(weight_dict['i2h'])
         weight_dict['h2o_w'] = np.matmul(ei_mask, np.abs(weight_dict['h2o_w']))
@@ -104,7 +107,7 @@ def analyze_simple_network(opts, plot_path, eval=False):
     weight_dict = get_weights(net, opts)
     data = get_data(opts, eval)
     task_phase_ix = analysis_helper.cumulative_time_dict(opts)
-    trial_type, trial_ix_dict, color_dict = analysis_helper.determine_trial_type(data['x'], cumul_time)
+    trial_type, trial_ix_dict, color_dict = analysis_helper.determine_trial_type(data['x'], task_phase_ix)
     data['trial_type'] = trial_type
     data['trial_ix_dict'] = trial_ix_dict
     data['color_dict'] = color_dict
@@ -115,8 +118,12 @@ def analyze_simple_network(opts, plot_path, eval=False):
 
 
 if __name__ == '__main__':
+    root = './'
+    if not os.path.exists(root + '_FIGURES'):
+        os.mkdir(root + '_FIGURES')
+
     save_path = './_DATA/EI'
     plot_path = './_FIGURES/EI'
-    opts = torch_model.load_config(save_path, 'EI')
+    opts = torch_model.load_config(save_path, 'one_layer')
     opts.save_path = save_path
     analyze_simple_network(opts, plot_path)
