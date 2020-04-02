@@ -38,7 +38,7 @@ def determine_trial_type(X, cumul_time):
     trial_type[sample[:,1] == 1] = 2
     trial_type += nonmatch
     trial_dict = {0: 'AA', 1: 'AB', 2: 'BB', 3: 'BA'}
-    color_dict = {'AA': 'cornflowerblue', 'AB': 'blue', 'BB': 'lightsalmon', 'BA': 'red'}
+    color_dict = {0: 'cornflowerblue', 1: 'blue', 2: 'lightsalmon', 3: 'red'}
     return trial_type, trial_dict, color_dict
 
 
