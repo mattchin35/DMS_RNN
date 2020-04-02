@@ -67,7 +67,7 @@ def _initialize(opts, reload, set_seed, test=False):
     return opts, data_loader, net
 
 
-def train(modelConfig, reload, set_seed=True):
+def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
     opts, data_loader, net = _initialize(modelConfig, reload, set_seed)
     optimizer = torch.optim.Adam(net.parameters(), lr=1.0 * opts.learning_rate)
 
@@ -111,6 +111,7 @@ def train(modelConfig, reload, set_seed=True):
             logger['activity_loss'].append(torch2numpy(loss_activity))
             logger['weight_loss'].append(torch2numpy(loss_weight))
 
+
         pe = opts.print_epoch_interval
         se = opts.save_epoch_interval
         n_iter = opts.n_input // opts.batch_size
@@ -130,12 +131,18 @@ def train(modelConfig, reload, set_seed=True):
             print('Time taken {:0.1f}s'.format(total_time))
             print('Examples/second {:.1f}'.format(pe / time_spent))
 
+        if logger['loss'] < stop_crit:
+            print("Training criterion reached. Saving files...")
+            net.save('net', cnt)
+            net.save('net')
+            break
+
         if cnt % se == 0 and ep != 0:
             print("Saving files...")
             net.save('net', cnt)
             net.save('net')
-            with open(os.path.join(opts.save_path, 'loss_log.pkl'), 'wb') as f:
-                pkl.dump(logger, f)
+
+
 
 def evaluate(modelConfig, log):
     print("Starting testing...")

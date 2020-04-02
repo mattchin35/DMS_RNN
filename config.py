@@ -52,7 +52,8 @@ class oneLayerModelConfig(inputConfig):
         self.time_loss_end = 20
 
         self.reload = False  # load checkpoint, overrides load_weights
-        self.save_path = './_DATA/test'
+        self.save_path = './_DATA/one_layer'
+        self.mode = 'one_layer'
 
         self.ttype = 'float'
         self.print_epoch_interval = 5
@@ -66,6 +67,8 @@ class threeLayerModelConfig(oneLayerModelConfig):
         super(threeLayerModelConfig, self).__init__()
         self.rnn_size = [30, 30, 30]
         self.trainable = [True, True, True]
+        self.save_path = './_DATA/three_layer'
+        self.mode = 'three_layer'
 
 
 class constrainedModelConfig(oneLayerModelConfig):
@@ -73,12 +76,15 @@ class constrainedModelConfig(oneLayerModelConfig):
         super(constrainedModelConfig, self).__init__()
         self.pir_size = 20
         self.alm_size = 20
+        self.save_path = './_DATA/constrained'
+        self.mode = 'constrained'
 
 
 class EIModelConfig(oneLayerModelConfig):
     def __init__(self):
         super(EIModelConfig, self).__init__()
         self.percent_E = .8
+        self.mode = 'EI'
 
 
 class interneuronModelConfig(threeLayerModelConfig):
