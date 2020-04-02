@@ -46,8 +46,8 @@ def plot_performance(data_dict, trial_type, plot_path):
     data = [(np.argmax(output[i], axis=1), np.argmax(labels[i], axis=1)) for i in ix]
 
     plot_name = 'performance'
-    utils.subplot_easy(data, 4, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'), ax_op=['tight'],
-                       tight_layout=True, linewidth=.5, hide_ticks=True, ylim=[-.5,2.5])
+    utils.subplot_easy(data, 4, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'),
+                       tight_layout=True, linewidth=.5, hide_ticks=True, ylim=[-.1,2.1])
 
 
 def plot_activity():
