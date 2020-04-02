@@ -246,16 +246,16 @@ class Constrained_Model(Abstract_Model):
 
 
 
-def load_config(save_path, epoch=None):
+def load_config(save_path, mode, epoch=None):
     if epoch is not None:
         save_path = os.path.join(save_path, 'epoch', str(epoch).zfill(4))
 
     with open(os.path.join(save_path, 'model_config.json'), 'r') as f:
         config_dict = json.load(f)
 
-    if opts.mode == 'one_layer':
+    if mode == 'one_layer':
         c = config.oneLayerModelConfig()
-    elif opts.mode == 'EI':
+    elif mode == 'EI':
         c = config.EIModelConfig()
 
     for key, val in config_dict.items():
