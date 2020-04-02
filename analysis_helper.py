@@ -8,6 +8,7 @@ import os
 import pickle as pkl
 import pandas as pd
 import utils
+import copy
 
 
 def hide_ticks(cur_axis):
@@ -18,7 +19,7 @@ def hide_ticks(cur_axis):
 
 
 def cumulative_time_dict(opts):
-    trial_time = opts.trial_time.copy()
+    trial_time = copy.deepcopy(opts.trial_time)
     dt = opts.dt
     for k, v in trial_time.items():
         trial_time[k] = int(v / dt)
@@ -31,11 +32,11 @@ def cumulative_time_dict(opts):
 def determine_trial_type(X, cumul_time):
     sample = X[:,cumul_time['sample'],:]
     test = X[:,cumul_time['test'],:]
-    nonmatch = (sample == test)[:, 0]
+    nonmatch = ~(sample == test)[:, 0]
 
     trial_type = np.zeros(X.shape[0])
     trial_type[sample[:,1] == 1] = 2
-    trial_type += 1 - nonmatch
+    trial_type += nonmatch
     trial_dict = {0: 'AA', 1: 'AB', 2: 'BB', 3: 'BA'}
     color_dict = {'AA': 'cornflowerblue', 'AB': 'blue', 'BB': 'lightsalmon', 'BA': 'red'}
     return trial_type, trial_dict, color_dict

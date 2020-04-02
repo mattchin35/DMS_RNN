@@ -8,7 +8,7 @@ import utils, config
 import os, re, tables
 import config
 import pickle as pkl
-import inputs, train
+import inputs, torch_train
 import pandas as pd
 import analysis_helper as helper
 
@@ -21,7 +21,7 @@ def plot_activity(opts, eval=True, data=None):
 
     # generate a plotting dataset
     if eval:
-        train.eval(opts, data)
+        torch_train.eval(opts, data)
 
     with open(os.path.join(save_path, activity_name + '.pkl'), 'rb') as f:
         data_dict = pkl.load(f)
@@ -211,7 +211,7 @@ def analyze_selectivity(opts, eval=False):
         opts.activity_name = activity_name
         opts.n_inputs = 200
         data = inputs.create_inputs(opts)
-        train.eval(opts, data)
+        torch_train.eval(opts, data)
         opts.activity_name = prev_act_name
         opts.n_inputs = prev_n_inputs
 
