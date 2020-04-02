@@ -38,8 +38,8 @@ def get_data(opts, eval):
     return logger
 
 
-def plot_performance(data_dict, trial_type, plot_path):
-    labels, output = data_dict['y'], data_dict['y_out']
+def plot_performance(data_dict, plot_path):
+    labels, output, trial_type = data_dict['y'], data_dict['y_out'], data_dict['trial_type']
 
     # find a trial for each trial type
     ix = [np.nonzero(trial_type == i)[0][0] for i in range(4)]
@@ -96,8 +96,6 @@ def plot_activity(data_dict, plot_path):
 def analyze_simple_network(opts, plot_path, eval=False):
     if not os.path.exists(plot_path):
         os.mkdir(plot_path)
-    # paths = opts.save_path.split('/')[2:]
-    # plot_path = '/'.join(['./_FIGURES'] + paths)
 
     opts, data_loader, net = torch_train._initialize(opts, reload=True, set_seed=False)
     if eval:
@@ -112,8 +110,8 @@ def analyze_simple_network(opts, plot_path, eval=False):
     data['color_dict'] = color_dict
     data['task_phase_ix'] = task_phase_ix
 
-    plot_performance(data, trial_type, plot_path)
-    # plot_activity(data, opts, plot_path)
+    plot_performance(data, plot_path)
+    plot_activity(data, plot_path)
 
 
 if __name__ == '__main__':
