@@ -79,7 +79,8 @@ def train(modelConfig, reload, set_seed=True):
 
     start_time = time.time()
     total_time = 0
-    net.save('net', 0)
+    if not reload:
+        net.save('net', 0)
     for ep in range(n_epoch):
         # criterion = torch.nn.MSELoss()
         criterion = torch.nn.CrossEntropyLoss()
