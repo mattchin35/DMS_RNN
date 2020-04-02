@@ -131,7 +131,7 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
             print('Time taken {:0.1f}s'.format(total_time))
             print('Examples/second {:.1f}'.format(pe / time_spent))
 
-        if logger['loss'] < stop_crit:
+        if np.mean(logger['loss'][-n_iter:]) < stop_crit:
             print("Training criterion reached. Saving files...")
             net.save('net', cnt)
             net.save('net')
