@@ -117,6 +117,6 @@ def analyze_simple_network(opts, plot_path, eval=False):
 if __name__ == '__main__':
     save_path = './_DATA/EI'
     plot_path = './_FIGURES/EI'
-    opts = torch_model.load_config(save_path)
+    opts = torch_model.load_config(save_path, 'EI')
     opts.save_path = save_path
     analyze_simple_network(opts, plot_path)
