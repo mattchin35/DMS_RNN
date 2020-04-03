@@ -49,7 +49,7 @@ def plot_performance(data_dict, plot_path):
     data = [(np.argmax(output[i], axis=1), np.argmax(labels[i], axis=1)) for i in ix]
 
     plot_name = 'performance'
-    utils.subplot_easy(data, 4, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'),
+    utils.subplot_easy(data, 1, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'),
                        tight_layout=True, linewidth=.5, hide_ticks=True, ylim=[-.1,2.1])
 
 
@@ -59,16 +59,16 @@ def plot_activity(data_dict, plot_path):
 
     nr = np.ceil(np.sqrt(opts.rnn_size)).astype(np.int32)
     nc = np.ceil(opts.rnn_size / nr).astype(np.int32)
-    ylim = [-.1, np.amax(h) + .1]
 
     # collect the average activity for each neuron for each trial type
     trial_type, color_dict, phase_ix = data_dict['trial_type'], data_dict['color_dict'], data_dict['task_phase_ix']
     phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
     mean, sem = [], []
     for i in range(4):
-        tt = h[trial_type == 0]
+        tt = h[trial_type == i]
         mean.append(np.mean(tt, axis=0))
         sem.append(sp.stats.sem(tt, ddof=0, axis=0))
+    ylim = [-.1, np.amax(mean) + .1]
 
     f, ax = plt.subplots(nr, nc)
     ax = np.ravel(ax, order='C')
@@ -86,8 +86,8 @@ def plot_activity(data_dict, plot_path):
         if i != nc*(nr-1):
             utils.hide_axis_ticks(ax[i])
         else:
-            ax[i].set_yticks([0, np.amax(h)])
-            [spine.set_linewidth(0.3) for spine in ax[i].spines.values()]
+            ax[i].set_yticks([0, ylim[1]])
+        [spine.set_linewidth(0.3) for spine in ax[i].spines.values()]
 
     plt.suptitle('Neural Activity by Trial Type')
     plot_name = os.path.join(plot_path, f'neural activity')
