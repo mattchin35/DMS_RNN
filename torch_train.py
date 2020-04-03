@@ -71,7 +71,7 @@ def _initialize(opts, reload, set_seed, test=False):
     return opts, data_loader, net
 
 
-def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
+def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
     opts, data_loader, net = _initialize(modelConfig, reload, set_seed)
     optimizer = torch.optim.Adam(net.parameters(), lr=1.0 * opts.learning_rate)
 
@@ -102,11 +102,18 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
                 hidden, out = net(xt, hidden)
                 if t >= t_loss_start and t <= t_loss_end:
                     loss_activity += opts.activity_alpha * torch.mean(torch.pow(hidden,2))
-                    loss_weight += opts.weight_alpha * torch.mean(torch.pow(net.h_w,2)) #fix
+                    loss_weight += opts.weight_alpha * torch.mean(torch.pow(net.h_w,2))  # L2 weight loss
+                    # loss_weight += opts.weight_alpha * torch.mean(torch.mean(net.h_w))  # L1 weight loss
                     loss_pred += criterion(out, yt)
 
-            loss = loss_pred + loss_weight + loss_activity
+            # loss = loss_pred + loss_weight + loss_activity
+            loss = (loss_pred + loss_weight + loss_activity) / opts.batch_size
             loss.backward()
+            if opts.clip_gradient:
+                for n, p in net.named_parameters():
+                    if p.requires_grad and torch.norm(p.grad) > 1:
+                        p.grad *= 1 / torch.norm(p.grad)
+
             optimizer.step()
 
             logger['epoch'].append(ep)
@@ -185,5 +192,7 @@ if __name__ == "__main__":
     c = config.oneLayerModelConfig()
     c.save_path = './_DATA/one_layer'
     # c = torch_model.load_config(c.save_path)
+    c.learning_rate = .01
+    c.clip_gradient = True
     train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)

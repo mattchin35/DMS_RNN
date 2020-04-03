@@ -30,16 +30,15 @@ class inputConfig(BaseConfig):
         self.fixation = True
 
 
-class oneLayerModelConfig(inputConfig):
-
+class baseModelConfig(inputConfig):
     def __init__(self):
-        super(oneLayerModelConfig, self).__init__()
-        self.rnn_size = 100
+        super(baseModelConfig, self).__init__()
         self.weight_alpha = .1
         self.activity_alpha = .1
 
         self.tau = 0.1  # neuronal time constant
-        self.noise = 0.05  # external noise on each timestep
+        self.input_noise = .01
+        self.network_noise = 0.05  # recurrent noise on each timestep
         self.decay = True
         self.testing = False
         self.load_checkpoint = False
@@ -50,10 +49,11 @@ class oneLayerModelConfig(inputConfig):
         self.epoch = 200
         self.time_loss_start = 5
         self.time_loss_end = 20
+        self.clip_gradient = False
+        self.vanishing_gradient_mult = 0
 
         self.reload = False  # load checkpoint, overrides load_weights
-        self.save_path = './_DATA/one_layer'
-        self.mode = 'one_layer'
+        self.save_path = './_DATA/'
 
         self.ttype = 'float'
         self.print_epoch_interval = 5
@@ -62,7 +62,15 @@ class oneLayerModelConfig(inputConfig):
         self.debug_weights = False
 
 
-class EIModelConfig(oneLayerModelConfig):
+class oneLayerModelConfig(baseModelConfig):
+    def __init__(self):
+        super(oneLayerModelConfig, self).__init__()
+        self.rnn_size = 100
+        self.save_path = './_DATA/one_layer'
+        self.mode = 'one_layer'
+
+
+class EIModelConfig(baseModelConfig):
     def __init__(self):
         super(EIModelConfig, self).__init__()
         self.rnn_size = 200
@@ -71,7 +79,7 @@ class EIModelConfig(oneLayerModelConfig):
         self.mode = 'EI'
 
 
-class threeLayerModelConfig(oneLayerModelConfig):
+class threeLayerModelConfig(baseModelConfig):
     def __init__(self):
         super(threeLayerModelConfig, self).__init__()
         self.rnn_size = [30, 30, 30]
@@ -80,7 +88,7 @@ class threeLayerModelConfig(oneLayerModelConfig):
         self.mode = 'three_layer'
 
 
-class constrainedModelConfig(oneLayerModelConfig):
+class constrainedModelConfig(baseModelConfig):
     def __init__(self):
         super(constrainedModelConfig, self).__init__()
         self.pir_size = 20
