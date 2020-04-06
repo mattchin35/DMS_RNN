@@ -31,12 +31,13 @@ class XJW_Simple(Abstract_Model):
     def forward(self, input, hidden):
         hprev, rate_prev = hidden
         i = self.i2h(input)
-        h_effective = torch.mul(self.h_w, self.h_mask)
-        h = torch.matmul(hprev, h_effective)
-        noise = np.sqrt(2 * self.time_const * self.config.network_noise ** 2) * \
-                torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
+        hw_effective = torch.mul(self.h_w, self.h_mask)
+        hrec = torch.matmul(rate_prev, hw_effective)
+        # noise = np.sqrt(2 * self.time_const * self.config.network_noise ** 2) * \
+        #         torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
+        noise = self.config.network_noise * torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
         ht = hprev * (1.- self.time_const) + \
-            (i + h + self.h_b) * self.time_const + noise
+            (i + hrec + self.h_b) * self.time_const + noise
         rt = torch.relu(ht)
         out = self.h2o(rt)
         return (ht, rt), out
