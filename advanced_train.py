@@ -209,6 +209,7 @@ if __name__ == "__main__":
     c = config.XJWModelConfig()
     # c = torch_model.load_config(c.save_path)
     c.clip_gradient = True
-    c.vanishing_gradient_mult = 2
+    c.vanishing_gradient_mult = 0
+    c.epoch = 500
     advanced_train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)
