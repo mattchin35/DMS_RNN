@@ -48,8 +48,6 @@ class baseModelConfig(inputConfig):
         self.epoch = 200
         self.time_loss_start = 5
         self.time_loss_end = 20
-        self.clip_gradient = False
-        self.vanishing_gradient_mult = 0
 
         self.reload = False  # load checkpoint, overrides load_weights
         self.save_path = './_DATA/'
@@ -73,6 +71,10 @@ class XJWModelConfig(baseModelConfig):
     def __init__(self):
         super(XJWModelConfig, self).__init__()
         self.rnn_size = 100
+
+        self.clip_gradient = False
+        self.vanishing_gradient_mult = 0
+
         self.save_path = './_DATA/XJW_simple'
         self.mode = 'XJW_simple'
 
@@ -91,6 +93,10 @@ class XJW_EIConfig(baseModelConfig):
         super(XJW_EIConfig, self).__init__()
         self.rnn_size = 500
         self.percent_E = .8
+
+        self.clip_gradient = False
+        self.vanishing_gradient_mult = 0
+
         self.save_path = './_DATA/XJW_EI'
         self.mode = 'XJW_EI'
 
