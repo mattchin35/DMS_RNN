@@ -31,8 +31,8 @@ class XJW_Simple(Abstract_Model):
     def forward(self, input, hidden):
         hprev, rate_prev = hidden
         i = self.i2h(input)
-        hw_effective = torch.mul(self.h_w, self.h_mask)
-        hrec = torch.matmul(rate_prev, hw_effective)
+        h_effective = torch.mul(self.h_w, self.h_mask)
+        hrec = torch.matmul(rate_prev, h_effective)
         # noise = np.sqrt(2 * self.time_const * self.config.network_noise ** 2) * \
         #         torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
         noise = self.config.network_noise * torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
@@ -81,20 +81,21 @@ class XJW_EI(Abstract_Model):
         self.h2o_b = torch.nn.Parameter(.01 * torch.rand(osize))
 
     def forward(self, input, hidden):
+        hprev, rate_prev = hidden
         i = torch.matmul(input, torch.abs(self.i2h))
 
         _h_effective = torch.abs(torch.mul(self.h_w, self.h_mask))
         h_effective = torch.matmul(self.ei_mask, _h_effective)
 
-        h = torch.matmul(hidden, h_effective)
+        hrec = torch.matmul(rate_prev, h_effective)
         noise = self.config.network_noise * torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
-        hidden = torch.relu(i + h + self.h_b + noise)
-        hidden = hidden * (1. - self.config.dt / self.config.tau) + \
-                 torch.relu(i + h + self.h_b + noise) * self.config.dt / self.config.tau
+        ht = hprev * (1. - self.config.dt / self.config.tau) + \
+                 (i + hrec + self.h_b + noise) * self.config.dt / self.config.tau
+        rt = torch.relu(ht)
 
         h2o_effective = torch.matmul(self.ei_mask, torch.abs(self.h2o_w))
-        out = torch.matmul(hidden, h2o_effective) + self.h2o_b
-        return hidden, out
+        out = torch.matmul(rt, h2o_effective) + self.h2o_b
+        return (ht, rt), out
 
     def initialZeroState(self):
         return torch.zeros(self.batch_size, self.hidden_size)

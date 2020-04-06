@@ -158,7 +158,7 @@ def advanced_train(modelConfig, reload, set_seed=True, stop_crit=5.0):
             total_time += time_spent
             start_time = time.time()
             print('Time taken {:0.1f}s'.format(total_time))
-            print('Examples/second {:.1f}'.format(pe / time_spent))
+            print('Examples/second {:.1f}'.format(pe * opts.n_input / time_spent))
 
         if np.mean(logger['error_loss'][-n_iter:]) < stop_crit:
             print("Training criterion reached. Saving files...")
@@ -206,10 +206,12 @@ def evaluate(modelConfig, log):
     return logger
 
 if __name__ == "__main__":
-    c = config.XJWModelConfig()
+    # c = config.XJWModelConfig()
+    c = config.XJW_EIConfig()
     # c = torch_model.load_config(c.save_path)
-    c.clip_gradient = False
+    c.clip_gradient = True
     c.vanishing_gradient_mult = 0
+    c.trial_time['delay'] = .5
     c.epoch = 500
     advanced_train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)

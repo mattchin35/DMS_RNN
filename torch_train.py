@@ -182,8 +182,9 @@ def evaluate(modelConfig, log):
     return logger
 
 if __name__ == "__main__":
-    c = config.oneLayerModelConfig()
-    c.save_path = './_DATA/one_layer'
+    # c = config.oneLayerModelConfig()
+    c = config.EIModelConfig()
+    c.trial_time['delay'] = .5
     # c = torch_model.load_config(c.save_path)
     train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)
