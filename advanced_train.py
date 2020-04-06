@@ -98,16 +98,34 @@ def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
             hs = []
             for t in range(x.shape[1]):
                 xt = torch.Tensor(x[:,t,:])
+                xt.retain_grad()
                 # yt = torch.Tensor(y[:,t,:])
                 yt = torch.argmax(y[:,t,:], dim=1)
                 hidden, out = net(xt, hidden)
                 if t >= t_loss_start and t <= t_loss_end:
                     loss_activity += opts.activity_alpha * torch.mean(torch.pow(hidden,2))
-                    loss_weight += opts.weight_alpha * torch.mean(torch.pow(net.h_w,2))
+                    loss_weight += opts.weight_alpha * torch.mean(torch.pow(net.h_w,2))  # L2 weight loss
+                    # loss_weight += opts.weight_alpha * torch.mean(torch.mean(net.h_w))  # L1 weight loss
                     loss_pred += criterion(out, yt)
 
-            loss = loss_pred + loss_weight + loss_activity
+                hs.append(hidden)
+
+                # Vanishing gradient regularization
+            dxt = [h.grad for h in hs[1:]]
+            _num = [(1 - opts.time_const) * d +
+                    opts.time_const * torch.matmul(d, net.h_w) * (h > 0).float() for d, h in zip(dxt, hs[:-1])]
+            num = torch.sum(torch.stack(_num, dim=1) ** 2, dim=2)
+            denom = torch.sum(torch.stack([d ** 2 for d in dxt], dim=1), dim=2)  # B x T
+            omega = torch.mean((num / denom - 1) ** 2, dim=[0, 1])  # B x T
+
+            # loss = loss_pred + loss_weight + loss_activity
+            loss = (loss_pred + loss_weight + loss_activity + omega * opts.vanishing_gradient_mult) / opts.batch_size
             loss.backward()
+            if opts.clip_gradient:
+                for n, p in net.named_parameters():
+                    if p.requires_grad and torch.norm(p.grad) > 1:
+                        p.grad *= 1 / torch.norm(p.grad)
+
             optimizer.step()
 
             logger['epoch'].append(ep)
@@ -186,5 +204,7 @@ if __name__ == "__main__":
     c = config.oneLayerModelConfig()
     c.save_path = './_DATA/one_layer'
     # c = torch_model.load_config(c.save_path)
+    c.learning_rate = .01
+    c.clip_gradient = True
     train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)
