@@ -68,6 +68,7 @@ class Simple_Model(Abstract_Model):
         self.hidden_size = opts.rnn_size
         self.batch_size = opts.batch_size
         self.config = opts
+        self.time_const = self.config.dt / self.config.tau
 
         self.i2h = nn.Linear(isize, opts.rnn_size)
         self.h_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
@@ -93,44 +94,6 @@ class Simple_Model(Abstract_Model):
         return torch.zeros(self.batch_size, self.hidden_size)
 
 
-class XJW_Simple(Abstract_Model):
-    """Basic 1 layer RNN with no constraints."""
-
-    def __init__(self, opts, isize, osize):
-        super(XJW_Simple, self).__init__(opts.save_path)
-
-        self.hidden_size = opts.rnn_size
-        self.batch_size = opts.batch_size
-        self.config = opts
-        self.time_const = self.config.dt / self.config.tau
-
-        self.i2h = nn.Linear(isize, opts.rnn_size)
-        self.h_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-        self.h_w = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size))
-        mask = np.ones((opts.rnn_size, opts.rnn_size)).astype(np.float32)
-        np.fill_diagonal(mask, 0)
-        mask = torch.from_numpy(mask)
-        h_mask = torch.nn.Parameter(mask, requires_grad=False)
-        self.h_mask = h_mask
-        self.h2o = torch.nn.Linear(opts.rnn_size, osize)
-
-    def forward(self, input, hidden):
-        xprev, hprev = hidden
-        i = self.i2h(input)
-        h_effective = torch.mul(self.h_w, self.h_mask)
-        h = torch.matmul(hprev, h_effective)
-        noise = torch.sqrt(2 * self.time_const * self.config.network_noise^2) * \
-                torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
-        xt = xprev * (1.- self.time_const) + \
-            (i + h + self.h_b) * self.time_const + noise
-        ht = torch.relu(xt)
-        out = self.h2o(hidden)
-        return (xt, ht), out
-
-    def initialZeroState(self):
-        return torch.zeros(self.batch_size, self.hidden_size)
-
-
 class EI_Model(Abstract_Model):
     def __init__(self, opts, isize, osize):
         super(EI_Model, self).__init__(opts.save_path)
@@ -138,6 +101,7 @@ class EI_Model(Abstract_Model):
         self.hidden_size = opts.rnn_size
         self.batch_size = opts.batch_size
         self.config = opts
+        self.time_const = self.config.dt / self.config.tau
 
         self.i2h = torch.nn.Parameter(.01 * torch.rand(isize, opts.rnn_size))
 

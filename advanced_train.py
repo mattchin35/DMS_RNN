@@ -2,7 +2,7 @@ import torch
 from numpy import random
 import random
 import time
-import torch_model
+import advanced_model
 import os
 import pickle as pkl
 
@@ -49,10 +49,10 @@ def _initialize(opts, reload, set_seed, test=False):
 
     dataset = InputDataset(opts)
     data_loader = DataLoader(dataset, batch_size=opts.batch_size, shuffle=True)
-    if opts.mode == 'one_layer':
-        net = torch_model.Simple_Model(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
-    elif opts.mode == 'EI':
-        net = torch_model.EI_Model(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
+    if opts.mode == 'XJW_simple':
+        net = advanced_model.XJW_Simple(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
+    elif opts.mode == 'XJW_EI':
+        net = advanced_model.XJW_EI(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
 
     net.model_config = opts
 
@@ -71,7 +71,8 @@ def _initialize(opts, reload, set_seed, test=False):
     return opts, data_loader, net
 
 
-def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
+def advanced_train(modelConfig, reload, set_seed=True, stop_crit=5.0):
+    """Training program for use with XWJ networks"""
     opts, data_loader, net = _initialize(modelConfig, reload, set_seed)
     optimizer = torch.optim.Adam(net.parameters(), lr=1.0 * opts.learning_rate)
 
@@ -95,13 +96,13 @@ def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
             loss_weight = 0
             loss_pred = 0
 
-            hs = []
+            hs, rs = [], []
             for t in range(x.shape[1]):
                 xt = torch.Tensor(x[:,t,:])
                 xt.retain_grad()
                 # yt = torch.Tensor(y[:,t,:])
                 yt = torch.argmax(y[:,t,:], dim=1)
-                hidden, out = net(xt, hidden)
+                hidden, (rate, out) = net(xt, hidden)
                 if t >= t_loss_start and t <= t_loss_end:
                     loss_activity += opts.activity_alpha * torch.mean(torch.pow(hidden,2))
                     loss_weight += opts.weight_alpha * torch.mean(torch.pow(net.h_w,2))  # L2 weight loss
@@ -109,11 +110,12 @@ def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
                     loss_pred += criterion(out, yt)
 
                 hs.append(hidden)
+                rs.append(rate)
 
                 # Vanishing gradient regularization
             dxt = [h.grad for h in hs[1:]]
             _num = [(1 - opts.time_const) * d +
-                    opts.time_const * torch.matmul(d, net.h_w) * (h > 0).float() for d, h in zip(dxt, hs[:-1])]
+                    opts.time_const * torch.matmul(d, net.h_w) * (h > 0).float() for d, h in zip(dxt, rs[:-1])]
             num = torch.sum(torch.stack(_num, dim=1) ** 2, dim=2)
             denom = torch.sum(torch.stack([d ** 2 for d in dxt], dim=1), dim=2)  # B x T
             omega = torch.mean((num / denom - 1) ** 2, dim=[0, 1])  # B x T
@@ -154,7 +156,7 @@ def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
             print('Time taken {:0.1f}s'.format(total_time))
             print('Examples/second {:.1f}'.format(pe / time_spent))
 
-        if np.mean(logger['loss'][-n_iter:]) < stop_crit:
+        if np.mean(logger['error_loss'][-n_iter:]) < stop_crit:
             print("Training criterion reached. Saving files...")
             net.save('net', cnt)
             net.save('net')
@@ -195,16 +197,14 @@ def evaluate(modelConfig, log):
         logger[k] = np.stack(v, axis=1)
 
     if log:
-        #batch, time, neuron
         with open(os.path.join(opts.save_path, 'test_log.pkl'), 'wb') as f:
             pkl.dump(logger, f)
     return logger
 
 if __name__ == "__main__":
-    c = config.oneLayerModelConfig()
-    c.save_path = './_DATA/one_layer'
+    c = config.XJWModelConfig()
     # c = torch_model.load_config(c.save_path)
     c.learning_rate = .01
     c.clip_gradient = True
-    train(c, reload=c.reload, set_seed=True)
+    advanced_train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)

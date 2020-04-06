@@ -16,7 +16,6 @@ class BaseConfig(object):
 
 
 class inputConfig(BaseConfig):
-
     def __init__(self):
         super(inputConfig, self).__init__()
         self.cdab = False
@@ -70,6 +69,14 @@ class oneLayerModelConfig(baseModelConfig):
         self.mode = 'one_layer'
 
 
+class XJWModelConfig(baseModelConfig):
+    def __init__(self):
+        super(XJWModelConfig, self).__init__()
+        self.rnn_size = 100
+        self.save_path = './_DATA/XJW_simple'
+        self.mode = 'XJW_simple'
+
+
 class EIModelConfig(baseModelConfig):
     def __init__(self):
         super(EIModelConfig, self).__init__()
@@ -77,6 +84,15 @@ class EIModelConfig(baseModelConfig):
         self.percent_E = .8
         self.save_path = './_DATA/EI'
         self.mode = 'EI'
+
+
+class XJW_EIConfig(baseModelConfig):
+    def __init__(self):
+        super(XJW_EIConfig, self).__init__()
+        self.rnn_size = 500
+        self.percent_E = .8
+        self.save_path = './_DATA/XJW_EI'
+        self.mode = 'XJW_EI'
 
 
 class threeLayerModelConfig(baseModelConfig):
@@ -98,7 +114,6 @@ class constrainedModelConfig(baseModelConfig):
 
 
 class interneuronModelConfig(threeLayerModelConfig):
-
     def __init__(self):
         super(interneuronModelConfig, self).__init__()
         self.nE = 40

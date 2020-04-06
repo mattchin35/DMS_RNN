@@ -71,7 +71,7 @@ def _initialize(opts, reload, set_seed, test=False):
     return opts, data_loader, net
 
 
-def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
+def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
     opts, data_loader, net = _initialize(modelConfig, reload, set_seed)
     optimizer = torch.optim.Adam(net.parameters(), lr=1.0 * opts.learning_rate)
 
@@ -95,7 +95,6 @@ def train(modelConfig, reload, set_seed=True, stop_crit=0.0):
             loss_weight = 0
             loss_pred = 0
 
-            hs = []
             for t in range(x.shape[1]):
                 xt = torch.Tensor(x[:,t,:])
                 # yt = torch.Tensor(y[:,t,:])
