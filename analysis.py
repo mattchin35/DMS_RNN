@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import torch_train
+import advanced_train
 import os
 import pickle as pkl
 import analysis_helper
@@ -102,7 +103,10 @@ def analyze_simple_network(opts, plot_path, eval=False):
 
     opts, data_loader, net = _initialize(opts, reload=True, set_seed=False)
     if eval:
-        torch_train.evaluate(opts, log=True)
+        if opts.mode[:3] == 'XJW':
+            advanced_train.evaluate(opts, log=True)
+        else:
+            torch_train.evaluate(opts, log=True)
 
     weight_dict = get_weights(net, opts)
     data = get_data(opts, eval)
