@@ -107,6 +107,12 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
 
             loss = loss_pred + loss_weight + loss_activity
             loss.backward()
+
+            if opts.clip_gradient:
+                for n, p in net.named_parameters():
+                    if p.requires_grad and torch.norm(p.grad) > 1:
+                        p.grad *= 1 / torch.norm(p.grad)
+
             optimizer.step()
 
             logger['epoch'].append(ep)
@@ -185,6 +191,8 @@ if __name__ == "__main__":
     # c = config.oneLayerModelConfig()
     c = config.EIModelConfig()
     c.trial_time['delay'] = .5
+    c.clip_gradient = True
+    c.epoch = 500
     # c = torch_model.load_config(c.save_path)
     train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)

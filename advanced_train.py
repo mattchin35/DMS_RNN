@@ -3,6 +3,7 @@ from numpy import random
 import random
 import time
 import advanced_model
+import torch_model
 import os
 import pickle as pkl
 
@@ -71,7 +72,7 @@ def _initialize(opts, reload, set_seed, test=False):
     return opts, data_loader, net
 
 
-def advanced_train(modelConfig, reload, set_seed=True, stop_crit=5.0):
+def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
     """Training program for use with XWJ networks"""
     opts, data_loader, net = _initialize(modelConfig, reload, set_seed)
     optimizer = torch.optim.Adam(net.parameters(), lr=1.0 * opts.learning_rate)
@@ -181,20 +182,22 @@ def evaluate(modelConfig, log):
     for x, y in data_loader:
         hidden = net.initialZeroState()
 
-        xs, ys, youts, hs = [], [], [], []
+        xs, ys, youts, hs, rs = [], [], [], [], []
         for t in range(x.shape[1]):
             xt = torch.Tensor(x[:,t,:])
             yt = torch.Tensor(y[:,t,:])
-            hidden, out = net(xt, hidden)
+            (ht, rt), out = net(xt, hidden)
             xs.append(torch2numpy(xt))
             ys.append(torch2numpy(yt))
             youts.append(torch2numpy(out))
-            hs.append(torch2numpy(hidden))
+            hs.append(torch2numpy(ht))
+            rs.append(torch2numpy(rt))
 
         logger['x'] = np.array(xs)
         logger['y'] = np.array(ys)
         logger['y_out'] = np.array(youts)
         logger['h'] = np.array(hs)
+        logger['r'] = np.array(rs)
         break
 
     for k, v in logger.items():
@@ -213,5 +216,5 @@ if __name__ == "__main__":
     c.vanishing_gradient_mult = 0
     c.trial_time['delay'] = .5
     c.epoch = 500
-    advanced_train(c, reload=c.reload, set_seed=True)
+    train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)

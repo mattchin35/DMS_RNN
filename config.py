@@ -57,6 +57,7 @@ class baseModelConfig(inputConfig):
         self.save_epoch_interval = 100
 
         self.debug_weights = False
+        self.clip_gradient = False
 
 
 class oneLayerModelConfig(baseModelConfig):
@@ -71,8 +72,7 @@ class XJWModelConfig(baseModelConfig):
     def __init__(self):
         super(XJWModelConfig, self).__init__()
         self.rnn_size = 100
-
-        self.clip_gradient = False
+        self.activity_alpha = .05
         self.vanishing_gradient_mult = 0
 
         self.save_path = './_DATA/XJW_simple'
@@ -82,7 +82,8 @@ class XJWModelConfig(baseModelConfig):
 class EIModelConfig(baseModelConfig):
     def __init__(self):
         super(EIModelConfig, self).__init__()
-        self.rnn_size = 200
+        self.rnn_size = 500
+        self.epoch = 500
         self.percent_E = .8
         self.save_path = './_DATA/EI'
         self.mode = 'EI'
@@ -93,8 +94,7 @@ class XJW_EIConfig(baseModelConfig):
         super(XJW_EIConfig, self).__init__()
         self.rnn_size = 500
         self.percent_E = .8
-
-        self.clip_gradient = False
+        self.activity_alpha = .05
         self.vanishing_gradient_mult = 0
 
         self.save_path = './_DATA/XJW_EI'
