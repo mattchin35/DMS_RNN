@@ -4,15 +4,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import torch_train
-import torch_model
 import os
 import pickle as pkl
-import json
 import analysis_helper
 from collections import defaultdict
-from tools import torch2numpy
-import utils
+from utils.tools import torch2numpy
+from utils import utils
 import config
+from utils.train_init import _initialize
 
 
 def get_weights(net, opts):
@@ -101,7 +100,7 @@ def analyze_simple_network(opts, plot_path, eval=False):
     if not os.path.exists(plot_path):
         os.mkdir(plot_path)
 
-    opts, data_loader, net = torch_train._initialize(opts, reload=True, set_seed=False)
+    opts, data_loader, net = _initialize(opts, reload=True, set_seed=False)
     if eval:
         torch_train.evaluate(opts, log=True)
 

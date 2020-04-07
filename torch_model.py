@@ -245,4 +245,3 @@ class Constrained_Model(Abstract_Model):
     def initialZeroState(self):
         return torch.zeros(self.batch_size, self.hidden_size)
 
-

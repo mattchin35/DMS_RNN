@@ -2,12 +2,9 @@ import matplotlib as mpl
 mpl.use('TKAgg')
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
-from scipy.stats import ranksums, mannwhitneyu, f_oneway, sem
+from scipy.stats import ranksums
 import os
-import pickle as pkl
-import pandas as pd
-import utils
+from utils import utils
 import copy
 
 
