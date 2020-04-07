@@ -56,6 +56,7 @@ def plot_performance(data_dict, plot_path):
     utils.subplot_easy(data, 1, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'),
                        tight_layout=True, linewidth=.5, hide_ticks=True, ylim=[-.1,2.1])
 
+
 def plot_unsorted_weights(data_dict, plot_path):
     hw = data_dict['h_w']
     plot_name = 'weights_unsorted'
@@ -126,7 +127,7 @@ def analyze_simple_network(opts, plot_path, eval=False):
 
     plot_performance(data, plot_path)
     plot_activity(data, plot_path)
-    plot_unsorted_weights(data, plot_path)
+    plot_unsorted_weights(weight_dict, plot_path)
 
 
 if __name__ == '__main__':
