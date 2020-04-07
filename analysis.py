@@ -122,8 +122,8 @@ if __name__ == '__main__':
     if not os.path.exists(root + '_FIGURES'):
         os.mkdir(root + '_FIGURES')
 
-    save_path = './_DATA/EI'
-    plot_path = './_FIGURES/EI'
-    opts = config.load_config(save_path, 'one_layer')
+    save_path = './_DATA/XJW_EI'
+    plot_path = './_FIGURES/XJW_EI'
+    opts = config.load_config(save_path, 'XJW_EI')
     opts.save_path = save_path
     analyze_simple_network(opts, plot_path)
