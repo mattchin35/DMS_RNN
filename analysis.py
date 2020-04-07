@@ -21,7 +21,7 @@ def get_weights(net, opts):
 
     weight_dict['h_w'] = weight_dict['h_w'] * weight_dict['h_mask']
 
-    if opts.mode == 'EI':
+    if opts.mode in ['EI', 'XJW_EI']:
         ei_mask = weight_dict['ei_mask']
 
         weight_dict['h_w'] = np.matmul(ei_mask, np.abs(weight_dict['h_w']))

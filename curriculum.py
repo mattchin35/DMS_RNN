@@ -9,7 +9,7 @@ def curriculum():
     # c = config.oneLayerModelConfig()
     c = config.EIModelConfig()
     c.trial_time['delay'] = .5
-    c.epoch = 200
+    c.epoch = 500
     c.clip_gradient = True
     # c = torch_model.load_config(c.save_path)
     torch_train.train(c, reload=c.reload, set_seed=True)
