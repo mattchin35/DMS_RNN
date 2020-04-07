@@ -63,53 +63,25 @@ def plot_unsorted_weights(data_dict, ix_dict, plot_path):
     utils.subimage_easy((hw), 1, plot_path, plot_name)
 
     active = ix_dict['active']
-    hw_active = hw[active,:][:, active]
+    hw_active = hw[active][:, active]
     plot_name = 'active_weights_unsorted'
     utils.subimage_easy((hw_active), 1, plot_path, plot_name)
 
 
-def plot_activity(data_dict, plot_path):
-    if opts.rnn_size == 100:
-        nr,  nc = 10, 10
-    elif opts.rnn_size == 500:
-        nr, nc = 20, 25
-    else:
-        nr = np.ceil(np.sqrt(opts.rnn_size)).astype(np.int32)
-        nc = np.ceil(opts.rnn_size / nr).astype(np.int32)
-
+def plot_activity(data_dict, ix_dict, plot_path):
     mean, sem = data_dict['mean'], data_dict['sem']
     color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
     phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
+    analysis_helper.make_activity_plot(mean, sem, color_dict, phase_ix, plot_path, plot_name='neural_activity')
 
-    # collect the average activity for each neuron for each trial type
-    T, D = mean[0].shape
-    ylim = [-.1, np.amax(mean) + .1]
+    active = ix_dict['active']
+    active_mean, active_sem = [m[:,active] for m in mean], [s[:, active] for s in sem]
+    inactive_mean, inactive_sem = [m[:,~active] for m in mean], [s[:, ~active] for s in sem]
 
-    f, ax = plt.subplots(nr, nc)
-    ax = np.ravel(ax, order='C')
-    for i in range(D):
-        for j, (tt_mean, tt_sem) in enumerate(zip(mean, sem)):
-            m, se = tt_mean[:, i], tt_sem[:, i]
-            ax[i].plot(m, lw=.3, color=color_dict[j])
-            ax[i].fill_between(m, m-se, m+se, lw=.3, alpha=.5, color=color_dict[j])
-
-        for p in phase_ix:
-            ax[i].plot([p, p], ylim, linewidth=.3, color='k', linestyle='dashed')
-
-        ax[i].set_ylim(ylim)
-        ax[i].set_xlim(0, D)
-        if i != nc*(nr-1):
-            utils.hide_axis_ticks(ax[i])
-        else:
-            ax[i].set_yticks([0, ylim[1]])
-            ax[i].tick_params(width=.3)
-        [spine.set_linewidth(0.3) for spine in ax[i].spines.values()]
-
-    plt.suptitle('Neural Activity by Trial Type')
-    plot_name = os.path.join(plot_path, f'neural activity')
-    format = 'png'  # none, png or pdf
-    f.savefig(plot_name, bbox_inches='tight', figsize=(14, 10), dpi=500, format=format)
-    plt.close('all')
+    analysis_helper.make_activity_plot(active_mean, active_sem, color_dict,
+                                       phase_ix, plot_path, plot_name='active_neural_activity')
+    analysis_helper.make_activity_plot(inactive_mean, inactive_sem, color_dict,
+                                       phase_ix, plot_path, plot_name='inactive_neural_activity')
 
 
 def get_active_neurons(data_dict, thresh=.05):
@@ -118,13 +90,13 @@ def get_active_neurons(data_dict, thresh=.05):
 
     # collect the average activity for each neuron for each trial type
     trial_type = data_dict['trial_type']
-    mean, max, sem = [], [], []
+    mean, nmax, sem = [], [], []
     for i in range(4):
         tt = h[trial_type == i]
         mean.append(np.mean(tt, axis=0))
         sem.append(sp.stats.sem(tt, ddof=0, axis=0))
-        max.append(np.amax(mean[-1], axis=1))
-    max_activity = np.amax(np.stack(max, axis=0), axis=0)
+        nmax.append(np.amax(mean[-1], axis=0))
+    max_activity = np.amax(np.stack(nmax, axis=0), axis=0)
     active = max_activity >= thresh
     data_dict['mean'] = mean
     data_dict['sem'] = sem

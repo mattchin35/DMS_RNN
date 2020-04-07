@@ -56,7 +56,7 @@ def hide_axis_ticks(ax):
 
 def subimage_easy(data, ncols, path, name, subtitles = [], suptitle = '',
                   cbar=False, vmin=-1, vmax=1, tight_layout=False, order='C',
-                  ax_op=['off', 'image'], pdf=False):
+                  colorbar=False, ax_op=['off', 'image'], pdf=False):
     """Make a figure with multiple subplots."""
     if subtitles:
         assert len(subtitles) == len(data), "Unequal lengths of subtitles and data lists"
@@ -77,8 +77,9 @@ def subimage_easy(data, ncols, path, name, subtitles = [], suptitle = '',
         # sns.heatmap(w, cmap='RdBu_r', ax=ax[r, c], cbar=cbar, center=0)
         # sns.heatmap(d, cmap='RdBu_r', vmin=vmin, vmax=vmax, ax=cur_axis, cbar=cbar, center=0)
         plt.imshow(d, cmap='RdBu_r', vmin=vmin, vmax=vmax)
-        cb = plt.colorbar()
-        cb.set_ticks([vmin, 0, vmax])
+        if colorbar:
+            cb = plt.colorbar()
+            cb.set_ticks([vmin, 0, vmax])
         if i == 0:
             plt.ylabel('Time')
         # cur_axis.set_xticklabels([])
