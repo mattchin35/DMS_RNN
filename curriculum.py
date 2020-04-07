@@ -14,7 +14,7 @@ def curriculum():
     # c = torch_model.load_config(c.save_path)
     torch_train.train(c, reload=c.reload, set_seed=True)
 
-    c = torch_model.load_config(c.save_path, c.mode)
+    c = config.load_config(c.save_path, c.mode)
     c.trial_time['delay'] = 1.5
     c.epoch = 200
     c.reload = True
@@ -32,7 +32,7 @@ def advanced_curriculum():
     # c = torch_model.load_config(c.save_path)
     advanced_train.train(c, reload=c.reload, set_seed=True)
 
-    c = torch_model.load_config(c.save_path, c.mode)
+    c = config.load_config(c.save_path, c.mode)
     c.trial_time['delay'] = 1.5
     c.epoch = 200
     c.reload = True

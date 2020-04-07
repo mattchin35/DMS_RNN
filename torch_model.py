@@ -246,19 +246,3 @@ class Constrained_Model(Abstract_Model):
         return torch.zeros(self.batch_size, self.hidden_size)
 
 
-
-def load_config(save_path, mode, epoch=None):
-    if epoch is not None:
-        save_path = os.path.join(save_path, 'epoch', str(epoch).zfill(4))
-
-    with open(os.path.join(save_path, 'model_config.json'), 'r') as f:
-        config_dict = json.load(f)
-
-    if mode == 'one_layer':
-        c = config.oneLayerModelConfig()
-    elif mode == 'EI':
-        c = config.EIModelConfig()
-
-    for key, val in config_dict.items():
-        setattr(c, key, val)
-    return c

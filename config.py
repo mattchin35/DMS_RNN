@@ -1,3 +1,7 @@
+import os
+import json
+
+
 class BaseConfig(object):
     def __init__(self):
         self.rng_seed = 0
@@ -125,6 +129,27 @@ class interneuronModelConfig(threeLayerModelConfig):
         self.nE = 40
         self.nI = 40
 
+
+def load_config(save_path, mode, epoch=None):
+    assert mode in ['one_layer', 'EI', 'XJW_simple', 'XJW_EI'], "Invalid mode"
+    if epoch is not None:
+        save_path = os.path.join(save_path, 'epoch', str(epoch).zfill(4))
+
+    with open(os.path.join(save_path, 'model_config.json'), 'r') as f:
+        config_dict = json.load(f)
+
+    if mode == 'one_layer':
+        c = oneLayerModelConfig()
+    elif mode == 'EI':
+        c = EIModelConfig()
+    elif mode == 'XJW_simple':
+        c = XJWModelConfig()
+    elif mode == 'XJW_EI':
+        c = XJW_EIConfig()
+
+    for key, val in config_dict.items():
+        setattr(c, key, val)
+    return c
 
 
 

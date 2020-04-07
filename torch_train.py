@@ -193,6 +193,6 @@ if __name__ == "__main__":
     c.trial_time['delay'] = .5
     c.clip_gradient = True
     c.epoch = 500
-    # c = torch_model.load_config(c.save_path)
+    # c = config.load_config(c.save_path)
     train(c, reload=c.reload, set_seed=True)
     evaluate(c, log=True)
