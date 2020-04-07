@@ -130,7 +130,9 @@ def evaluate(modelConfig, log):
         for t in range(x.shape[1]):
             xt = torch.Tensor(x[:,t,:])
             yt = torch.Tensor(y[:,t,:])
-            (ht, rt), out = net(xt, hidden)
+            hidden, out = net(xt, hidden)
+
+            ht, rt = hidden
             xs.append(torch2numpy(xt))
             ys.append(torch2numpy(yt))
             youts.append(torch2numpy(out))
