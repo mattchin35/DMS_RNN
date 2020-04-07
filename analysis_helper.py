@@ -26,6 +26,34 @@ def cumulative_time_dict(opts):
     return cumul_time
 
 
+# def make_activity_plot(mean, sem, nr, nc):
+#     f, ax = plt.subplots(nr, nc)
+#     ax = np.ravel(ax, order='C')
+#     for i in range(D):
+#         for j, (tt_mean, tt_sem) in enumerate(zip(mean, sem)):
+#             m, se = tt_mean[:, i], tt_sem[:, i]
+#             ax[i].plot(m, lw=.3, color=color_dict[j])
+#             ax[i].fill_between(m, m - se, m + se, lw=.3, alpha=.5, color=color_dict[j])
+#
+#         for p in phase_ix:
+#             ax[i].plot([p, p], ylim, linewidth=.3, color='k', linestyle='dashed')
+#
+#         ax[i].set_ylim(ylim)
+#         ax[i].set_xlim(0, D)
+#         if i != nc * (nr - 1):
+#             utils.hide_axis_ticks(ax[i])
+#         else:
+#             ax[i].set_yticks([0, ylim[1]])
+#             ax[i].tick_params(width=.3)
+#         [spine.set_linewidth(0.3) for spine in ax[i].spines.values()]
+#
+#     plt.suptitle('Neural Activity by Trial Type')
+#     plot_name = os.path.join(plot_path, f'neural activity')
+#     format = 'png'  # none, png or pdf
+#     f.savefig(plot_name, bbox_inches='tight', figsize=(14, 10), dpi=500, format=format)
+#     plt.close('all')
+
+
 def determine_trial_type(X, cumul_time):
     sample = X[:,cumul_time['sample'],:]
     test = X[:,cumul_time['test'],:]

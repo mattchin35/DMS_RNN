@@ -57,16 +57,18 @@ def plot_performance(data_dict, plot_path):
                        tight_layout=True, linewidth=.5, hide_ticks=True, ylim=[-.1,2.1])
 
 
-def plot_unsorted_weights(data_dict, plot_path):
+def plot_unsorted_weights(data_dict, ix_dict, plot_path):
     hw = data_dict['h_w']
     plot_name = 'weights_unsorted'
     utils.subimage_easy((hw), 1, plot_path, plot_name)
 
+    active = ix_dict['active']
+    hw_active = hw[active,:][:, active]
+    plot_name = 'active_weights_unsorted'
+    utils.subimage_easy((hw_active), 1, plot_path, plot_name)
+
 
 def plot_activity(data_dict, plot_path):
-    h, y_out, x, y = data_dict['h'], data_dict['y_out'], data_dict['x'], data_dict['y']
-    print("Max activity:", np.amax(h))
-
     if opts.rnn_size == 100:
         nr,  nc = 10, 10
     elif opts.rnn_size == 500:
@@ -75,19 +77,17 @@ def plot_activity(data_dict, plot_path):
         nr = np.ceil(np.sqrt(opts.rnn_size)).astype(np.int32)
         nc = np.ceil(opts.rnn_size / nr).astype(np.int32)
 
-    # collect the average activity for each neuron for each trial type
-    trial_type, color_dict, phase_ix = data_dict['trial_type'], data_dict['color_dict'], data_dict['task_phase_ix']
+    mean, sem = data_dict['mean'], data_dict['sem']
+    color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
     phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
-    mean, sem = [], []
-    for i in range(4):
-        tt = h[trial_type == i]
-        mean.append(np.mean(tt, axis=0))
-        sem.append(sp.stats.sem(tt, ddof=0, axis=0))
+
+    # collect the average activity for each neuron for each trial type
+    T, D = mean[0].shape
     ylim = [-.1, np.amax(mean) + .1]
 
     f, ax = plt.subplots(nr, nc)
     ax = np.ravel(ax, order='C')
-    for i in range(h.shape[-1]):
+    for i in range(D):
         for j, (tt_mean, tt_sem) in enumerate(zip(mean, sem)):
             m, se = tt_mean[:, i], tt_sem[:, i]
             ax[i].plot(m, lw=.3, color=color_dict[j])
@@ -97,11 +97,12 @@ def plot_activity(data_dict, plot_path):
             ax[i].plot([p, p], ylim, linewidth=.3, color='k', linestyle='dashed')
 
         ax[i].set_ylim(ylim)
-        ax[i].set_xlim(0, h.shape[1])
+        ax[i].set_xlim(0, D)
         if i != nc*(nr-1):
             utils.hide_axis_ticks(ax[i])
         else:
             ax[i].set_yticks([0, ylim[1]])
+            ax[i].tick_params(width=.3)
         [spine.set_linewidth(0.3) for spine in ax[i].spines.values()]
 
     plt.suptitle('Neural Activity by Trial Type')
@@ -111,22 +112,44 @@ def plot_activity(data_dict, plot_path):
     plt.close('all')
 
 
+def get_active_neurons(data_dict, thresh=.05):
+    h = data_dict['h']
+    print("Max activity:", np.amax(h))
+
+    # collect the average activity for each neuron for each trial type
+    trial_type = data_dict['trial_type']
+    mean, max, sem = [], [], []
+    for i in range(4):
+        tt = h[trial_type == i]
+        mean.append(np.mean(tt, axis=0))
+        sem.append(sp.stats.sem(tt, ddof=0, axis=0))
+        max.append(np.amax(mean[-1], axis=1))
+    max_activity = np.amax(np.stack(max, axis=0), axis=0)
+    active = max_activity >= thresh
+    data_dict['mean'] = mean
+    data_dict['sem'] = sem
+    ix_dict = dict(active=active)
+    return ix_dict, data_dict
+
+
 def analyze_simple_network(opts, plot_path, eval=False):
     if not os.path.exists(plot_path):
         os.mkdir(plot_path)
 
     opts, data_loader, net = _initialize(opts, reload=True, set_seed=False)
     weight_dict = get_weights(net, opts)
-    data = get_data(opts, eval)
+    data_dict = get_data(opts, eval)
     task_phase_ix = analysis_helper.cumulative_time_dict(opts)
     trial_type, trial_ix_dict, color_dict = analysis_helper.determine_trial_type(data['x'], task_phase_ix)
-    data['trial_type'] = trial_type
-    data['trial_ix_dict'] = trial_ix_dict
-    data['color_dict'] = color_dict
-    data['task_phase_ix'] = task_phase_ix
+    data_dict['trial_type'] = trial_type
+    data_dict['trial_ix_dict'] = trial_ix_dict
+    data_dict['color_dict'] = color_dict
+    data_dict['task_phase_ix'] = task_phase_ix
 
-    plot_performance(data, plot_path)
-    plot_activity(data, plot_path)
+    ix_dict, data_dict = get_active_neurons(data_dict)
+
+    plot_performance(data_dict, plot_path)
+    plot_activity(data_dict, plot_path)
     plot_unsorted_weights(weight_dict, plot_path)
 
 
