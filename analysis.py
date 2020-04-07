@@ -86,7 +86,7 @@ def plot_activity(data_dict, ix_dict, plot_path):
 
 def get_active_neurons(data_dict, thresh=.05):
     if opts.mode[:3] == 'XJW':
-        h = data_dict['r']
+        h = data_dict['r']  # use the firing rates, not current
     else:
         h = data_dict['h']
     print("Max activity:", np.amax(h))
@@ -101,6 +101,8 @@ def get_active_neurons(data_dict, thresh=.05):
         nmax.append(np.amax(mean[-1], axis=0))
     max_activity = np.amax(np.stack(nmax, axis=0), axis=0)
     active = max_activity >= thresh
+    print(f'{np.sum(active)} neurons active')
+
     data_dict['mean'] = mean
     data_dict['sem'] = sem
     ix_dict = dict(active=active)
@@ -121,7 +123,7 @@ def analyze_simple_network(opts, plot_path, eval=False):
     data_dict['color_dict'] = color_dict
     data_dict['task_phase_ix'] = task_phase_ix
 
-    ix_dict, data_dict = get_active_neurons(data_dict)
+    ix_dict, data_dict = get_active_neurons(data_dict, thresh=.1)
 
     # plot_performance(data_dict, plot_path)
     plot_activity(data_dict, ix_dict, plot_path)
