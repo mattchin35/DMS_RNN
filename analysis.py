@@ -121,7 +121,7 @@ def analyze_simple_network(opts, plot_path, eval=False):
     ix_dict, data_dict = get_active_neurons(data_dict)
 
     plot_performance(data_dict, plot_path)
-    plot_activity(data_dict, plot_path)
+    plot_activity(data_dict, ix_dict, plot_path)
     plot_unsorted_weights(weight_dict, ix_dict, plot_path)
 
 
