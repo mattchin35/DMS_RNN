@@ -124,7 +124,7 @@ def evaluate(modelConfig, log):
     logger = defaultdict(list)
 
     for x, y in data_loader:
-        hidden = net.initialZeroState()
+        hidden = (net.initialZeroState(), net.initialZeroState())
 
         xs, ys, youts, hs, rs = [], [], [], [], []
         for t in range(x.shape[1]):
