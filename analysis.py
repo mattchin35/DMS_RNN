@@ -35,10 +35,13 @@ def get_weights(net, opts):
 def get_data(opts, eval):
     fname = os.path.join(opts.save_path, 'test_log.pkl')
     if eval or not os.path.exists(fname):
-        logger = torch_train.evaluate(opts, log=True)
-    else:
-        with open(fname, 'rb') as f:
-            logger = pkl.load(f)
+        if opts.mode[:3] == 'XJW':
+            advanced_train.evaluate(opts, log=True)
+        else:
+            torch_train.evaluate(opts, log=True)
+
+    with open(fname, 'rb') as f:
+        logger = pkl.load(f)
     return logger
 
 
@@ -102,12 +105,6 @@ def analyze_simple_network(opts, plot_path, eval=False):
         os.mkdir(plot_path)
 
     opts, data_loader, net = _initialize(opts, reload=True, set_seed=False)
-    if eval:
-        if opts.mode[:3] == 'XJW':
-            advanced_train.evaluate(opts, log=True)
-        else:
-            torch_train.evaluate(opts, log=True)
-
     weight_dict = get_weights(net, opts)
     data = get_data(opts, eval)
     task_phase_ix = analysis_helper.cumulative_time_dict(opts)
