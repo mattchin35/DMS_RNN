@@ -85,7 +85,10 @@ def plot_activity(data_dict, ix_dict, plot_path):
 
 
 def get_active_neurons(data_dict, thresh=.05):
-    h = data_dict['h']
+    if opts.mode[:3] == 'XJW':
+        h = data_dict['r']
+    else:
+        h = data_dict['h']
     print("Max activity:", np.amax(h))
 
     # collect the average activity for each neuron for each trial type
@@ -120,7 +123,7 @@ def analyze_simple_network(opts, plot_path, eval=False):
 
     ix_dict, data_dict = get_active_neurons(data_dict)
 
-    plot_performance(data_dict, plot_path)
+    # plot_performance(data_dict, plot_path)
     plot_activity(data_dict, ix_dict, plot_path)
     plot_unsorted_weights(weight_dict, ix_dict, plot_path)
 
