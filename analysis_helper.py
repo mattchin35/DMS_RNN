@@ -28,7 +28,8 @@ def cumulative_time_dict(opts):
 
 def make_activity_plot(mean, sem, color_dict, phase_ix, plot_path, plot_name='neural_activity'):
     T, D = mean[0].shape
-    ylim = [-.1, np.amax(mean) + .1]
+    bnd = np.amax(mean) * .05
+    ylim = [-bnd, np.amax(mean) + bnd]
     if D == 100:
         nr,  nc = 10, 10
     elif D == 500:
@@ -49,7 +50,7 @@ def make_activity_plot(mean, sem, color_dict, phase_ix, plot_path, plot_name='ne
             ax[i].plot([p, p], ylim, linewidth=.3, color='k', linestyle='dashed')
 
         ax[i].set_ylim(ylim)
-        ax[i].set_xlim(0, D)
+        ax[i].set_xlim(0, T)
         if i != nc * (nr - 1):
             utils.hide_axis_ticks(ax[i])
         else:
