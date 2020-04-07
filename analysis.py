@@ -12,6 +12,7 @@ import analysis_helper
 from collections import defaultdict
 from tools import torch2numpy
 import utils
+import config
 
 
 def get_weights(net, opts):
@@ -124,6 +125,6 @@ if __name__ == '__main__':
 
     save_path = './_DATA/EI'
     plot_path = './_FIGURES/EI'
-    opts = torch_model.load_config(save_path, 'one_layer')
+    opts = config.load_config(save_path, 'one_layer')
     opts.save_path = save_path
     analyze_simple_network(opts, plot_path)
