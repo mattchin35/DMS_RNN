@@ -61,9 +61,9 @@ def make_activity_plot(mean, sem, color_dict, phase_ix, plot_path, plot_name='ne
     for i in range(D, nr*nc):
         ax[i].axis('off')
 
-    plt.suptitle('Neural Activity by Trial Type')
+    # plt.suptitle('Neural Activity by Trial Type')
     plot_name = os.path.join(plot_path, plot_name)
-    format = 'png'  # none, png or pdf
+    format = 'pdf'  # none, png or pdf
     f.savefig(plot_name, bbox_inches='tight', figsize=(14, 10), dpi=500, format=format)
     plt.close('all')
 

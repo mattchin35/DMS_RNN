@@ -85,7 +85,7 @@ def plot_activity(data_dict, ix_dict, plot_path):
 
 def plot_EI_activity(data_dict, ix_dict, plot_path, opts):
     mean, sem = data_dict['mean'], data_dict['sem']
-    nE = int(opts.proportion_E * opts.rnn_size)
+    nE = int(opts.percent_E * opts.rnn_size)
     E = np.arange(opts.rnn_size) < nE
     color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
     phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
