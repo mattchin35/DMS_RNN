@@ -83,6 +83,27 @@ def plot_activity(data_dict, ix_dict, plot_path):
     analysis_helper.make_activity_plot(inactive_mean, inactive_sem, color_dict,
                                        phase_ix, plot_path, plot_name='inactive_neural_activity')
 
+def plot_EI_activity(data_dict, ix_dict, plot_path, opts):
+    mean, sem = data_dict['mean'], data_dict['sem']
+    nE = int(opts.proportion_E * opts.rnn_size)
+    E = np.arange(opts.rnn_size) < nE
+    color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
+    phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
+    active = ix_dict['active']
+
+    E_ix = active & E
+    I_ix = active & (~E)
+    print(f'{np.sum(E_ix)} active ex, {np.sum(I_ix)} active inh: ' +
+          f'{np.sum(E_ix) / (np.sum(E_ix)+np.sum(I_ix))}% ex')
+
+    E_mean = [m[:,E_ix] for m in mean]
+    E_sem = [s[:,E_ix] for s in sem]
+    analysis_helper.make_activity_plot(E_mean, E_sem, color_dict, phase_ix, plot_path, plot_name='E_activity')
+
+    I_mean = [m[:, I_ix] for m in mean]
+    I_sem = [s[:, I_ix] for s in sem]
+    analysis_helper.make_activity_plot(I_mean, I_sem, color_dict, phase_ix, plot_path, plot_name='I_activity')
+
 
 def get_active_neurons(data_dict, thresh=.05):
     if opts.mode[:3] == 'XJW':
@@ -128,6 +149,13 @@ def analyze_simple_network(opts, plot_path, eval=False):
     # plot_performance(data_dict, plot_path)
     plot_activity(data_dict, ix_dict, plot_path)
     plot_unsorted_weights(weight_dict, ix_dict, plot_path)
+
+    if opts.mode[-2:] == 'EI':
+        plot_EI_activity(data_dict, ix_dict, plot_path, opts)
+
+
+def analyze_EI_network(opts, plot_path, data_dict, ix_dict):
+    pass
 
 
 if __name__ == '__main__':

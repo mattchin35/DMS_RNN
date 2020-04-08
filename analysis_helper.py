@@ -58,9 +58,8 @@ def make_activity_plot(mean, sem, color_dict, phase_ix, plot_path, plot_name='ne
             ax[i].tick_params(width=.3)
         [spine.set_linewidth(0.3) for spine in ax[i].spines.values()]
 
-    if nr*nc > D:
-        for i in range(nr*nc-D, nr*nc):
-            utils.hide_axis_ticks(ax[i])
+    for i in range(D, nr*nc):
+        ax[i].axis('off')
 
     plt.suptitle('Neural Activity by Trial Type')
     plot_name = os.path.join(plot_path, plot_name)
