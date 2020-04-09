@@ -21,7 +21,7 @@ def test_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     h, phase_ix, trial_type, active = get_selectivity_data(data_dict, ix_dict, opts)
     test_mean = np.mean(h[:, phase_ix['test']:phase_ix['response'],:], axis=1)  # N x D
 
-    atest = (trial_type == 0) & (trial_type == 3)
+    atest = (trial_type == 0) | (trial_type == 3)
     btest = ~atest
     a_test_means = test_mean[atest]
     b_test_means = test_mean[btest]
@@ -39,7 +39,7 @@ def sample_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     h, phase_ix, trial_type, active = get_selectivity_data(data_dict, ix_dict, opts)
     sample_mean = np.mean(h[:, phase_ix['sample']:phase_ix['delay'], :], axis=1)  # N x D
 
-    asample = (trial_type == 0) & (trial_type == 1)
+    asample = (trial_type == 0) | (trial_type == 1)
     bsample = ~asample
     a_sample_means = sample_mean[asample]
     b_sample_means = sample_mean[bsample]
@@ -58,7 +58,7 @@ def memory_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     memory_activity = h[:, int(phase_ix['test'] - .5 / opts.dt):phase_ix['test'], :]
     mean = np.mean(memory_activity, axis=1)  # N x D
 
-    amemory = (trial_type == 0) & (trial_type == 1)
+    amemory = (trial_type == 0) | (trial_type == 1)
     bmemory = ~amemory
     a_memory_means = mean[amemory]
     b_memory_means = mean[bmemory]
@@ -76,7 +76,7 @@ def choice_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     h, phase_ix, trial_type, active = get_selectivity_data(data_dict, ix_dict, opts)
     choice_mean = np.mean(h[:, phase_ix['response']:, :], axis=1)  # N x D
 
-    match = (trial_type == 0) & (trial_type == 2)
+    match = (trial_type == 0) | (trial_type == 2)
     nonmatch = ~match
     match_means = choice_mean[match]
     nonmatch_means = choice_mean[nonmatch]
@@ -147,7 +147,7 @@ def determine_ranksum_selectivity(x, y, alpha=.05, abs_thresh=.05):
 
 
 def selectivity_analysis(opts):
-    with open(os.path.join(save_path, 'analysis.pkl'), 'wb') as f:
+    with open(os.path.join(save_path, 'analysis.pkl'), 'rb') as f:
         save_dict = pkl.load(f)
 
     data_dict = save_dict['data']
@@ -171,12 +171,12 @@ def selectivity_analysis(opts):
     aa_selective, ab_selective, bb_selective, ba_selective, tt_stat, tt_pval = \
         trial_type_selectivity(a_test_selective, b_test_selective, data_dict, ix_dict, opts)
 
-    odor = odor_a_selective & odor_b_selective
-    trial_type = aa_selective & ab_selective & bb_selective & ba_selective
-    choice = match_selective & nonmatch_selective
-    memory = a_memory_selective & b_memory_selective
-    sample = a_sample_selective & b_sample_selective
-    test = a_test_selective & b_test_selective
+    odor = odor_a_selective | odor_b_selective
+    trial_type = aa_selective | ab_selective | bb_selective | ba_selective
+    choice = match_selective | nonmatch_selective
+    memory = a_memory_selective | b_memory_selective
+    sample = a_sample_selective | b_sample_selective
+    test = a_test_selective | b_test_selective
 
     ix_dict = dict(a_test_selective=a_test_selective,
              b_test_selective=b_test_selective,
@@ -203,7 +203,7 @@ def selectivity_analysis(opts):
     count_dict = dict()
     for k, v in ix_dict.items():
         count_dict[k] = np.sum(v)
-        print(f'{v} {k} selective neurons')
+        print(f'{np.sum(v)} {k} neurons')
 
     save_dict = dict(data=data_dict, weights=weight_dict, ix=ix_dict)
     with open(os.path.join(opts.save_path, 'analysis.pkl'), 'wb') as f:
@@ -211,7 +211,7 @@ def selectivity_analysis(opts):
 
 
 def plot_selectivity(plot_path):
-    with open(os.path.join(save_path, 'analysis.pkl'), 'wb') as f:
+    with open(os.path.join(save_path, 'analysis.pkl'), 'rb') as f:
         save_dict = pkl.load(f)
 
     data_dict = save_dict['data']
@@ -223,11 +223,12 @@ def plot_selectivity(plot_path):
 
     categories = ['a_test_selective', 'b_test_selective', 'a_sample_selective', 'b_sample_selective',
      'odor_a_selective', 'odor_b_selective', 'aa_selective', 'ab_selective', 'bb_selective', 'ba_selective',
-     'match_selective', 'nonmatch_selective', 'a_memory_selective', 'b_memory_selective', 'trial_type']
+     'match_selective', 'nonmatch_selective', 'a_memory_selective', 'b_memory_selective']
 
     for c in categories:
-        me, se = [m[:, ix_dict[c]] for m in mean], [s[:, ix_dict[c]] for s in sem]
-        analysis_helper.make_activity_plot(me, se, color_dict, phase_ix, plot_path, plot_name=c)
+        if np.sum(ix_dict[c]) > 0:
+            me, se = [m[:, ix_dict[c]] for m in mean], [s[:, ix_dict[c]] for s in sem]
+            analysis_helper.make_activity_plot(me, se, color_dict, phase_ix, plot_path, plot_name=c)
 
 
 if __name__ == '__main__':
@@ -238,6 +239,9 @@ if __name__ == '__main__':
     mode = 'XJW_EI'
     save_path = './_DATA/' + mode
     plot_path = './_FIGURES/' + mode
+    if not os.path.exists(plot_path):
+        os.mkdir(plot_path)
+
     opts = config.load_config(save_path, mode)
     opts.save_path = save_path
     selectivity_analysis(opts)
