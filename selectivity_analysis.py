@@ -1,17 +1,11 @@
 import matplotlib as mpl
 mpl.use('TkAgg')
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import ranksums
 import os
 import pickle as pkl
 import analysis_helper
-from collections import defaultdict
-from utils.tools import torch2numpy
-from utils import utils
 import config
-from utils.train_init import _initialize
-import analysis
 
 
 def get_selectivity_data(data_dict, ix_dict, opts):
@@ -143,7 +137,6 @@ def determine_ranksum_selectivity(x, y, alpha=.05, abs_thresh=.05):
     stats = np.array(stats)
     pvals = np.array(pvals)
     selective = pvals < alpha
-    # print(test_pval[test_selective])
 
     # determine which option a neuron is selective for
     _x_selective = np.mean(x, axis=0) > (np.mean(y, axis=0) + abs_thresh)
@@ -153,7 +146,7 @@ def determine_ranksum_selectivity(x, y, alpha=.05, abs_thresh=.05):
     return x_selective, y_selective, stats, pvals
 
 
-def selectivity_analysis(opts, plot_path):
+def selectivity_analysis(opts):
     with open(os.path.join(save_path, 'analysis.pkl'), 'wb') as f:
         save_dict = pkl.load(f)
 
@@ -217,6 +210,26 @@ def selectivity_analysis(opts, plot_path):
         pkl.dump(save_dict, f)
 
 
+def plot_selectivity(plot_path):
+    with open(os.path.join(save_path, 'analysis.pkl'), 'wb') as f:
+        save_dict = pkl.load(f)
+
+    data_dict = save_dict['data']
+    ix_dict = save_dict['ix']
+
+    mean, sem = data_dict['mean'], data_dict['sem']
+    color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
+    phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
+
+    categories = ['a_test_selective', 'b_test_selective', 'a_sample_selective', 'b_sample_selective',
+     'odor_a_selective', 'odor_b_selective', 'aa_selective', 'ab_selective', 'bb_selective', 'ba_selective',
+     'match_selective', 'nonmatch_selective', 'a_memory_selective', 'b_memory_selective', 'trial_type']
+
+    for c in categories:
+        me, se = [m[:, ix_dict[c]] for m in mean], [s[:, ix_dict[c]] for s in sem]
+        analysis_helper.make_activity_plot(me, se, color_dict, phase_ix, plot_path, plot_name=c)
+
+
 if __name__ == '__main__':
     root = './'
     if not os.path.exists(root + '_FIGURES'):
@@ -227,4 +240,5 @@ if __name__ == '__main__':
     plot_path = './_FIGURES/' + mode
     opts = config.load_config(save_path, mode)
     opts.save_path = save_path
-    selectivity_analysis(opts, plot_path)
+    selectivity_analysis(opts)
+    plot_selectivity(plot_path)

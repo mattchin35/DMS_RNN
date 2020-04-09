@@ -2,7 +2,6 @@ import matplotlib as mpl
 mpl.use('TKAgg')
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import ranksums
 import os
 from utils import utils
 import copy
