@@ -69,8 +69,7 @@ def plot_unsorted_weights(data_dict, ix_dict, plot_path):
 
 def plot_activity(data_dict, ix_dict, plot_path):
     mean, sem = data_dict['mean'], data_dict['sem']
-    color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
-    phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
+    color_dict, phase_ix = data_dict['color_dict'], data_dict['phase_ix_list']
     analysis_helper.make_activity_plot(mean, sem, color_dict, phase_ix, plot_path, plot_name='neural_activity')
 
     active = ix_dict['active']
@@ -85,8 +84,7 @@ def plot_activity(data_dict, ix_dict, plot_path):
 
 def plot_EI_activity(data_dict, ix_dict, plot_path):
     mean, sem = data_dict['mean'], data_dict['sem']
-    color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
-    phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
+    color_dict, phase_ix = data_dict['color_dict'], data_dict['phase_ix_list']
     E_ix = ix_dict['E_ix']
     I_ix = ix_dict['I_ix']
 
@@ -112,17 +110,24 @@ def get_active_neurons(data_dict, thresh=.05):
     # collect the average activity for each neuron for each trial type
     trial_type = data_dict['trial_type']
     mean, nmax, sem = [], [], []
+    mean_out, sem_out = [], []
     for i in range(4):
         tt = h[trial_type == i]
+        out = data_dict['y_out'][trial_type == i]
         mean.append(np.mean(tt, axis=0))
         sem.append(sp.stats.sem(tt, ddof=0, axis=0))
         nmax.append(np.amax(mean[-1], axis=0))
+        mean_out.append(np.mean(out, axis=0))
+        sem_out.append(sp.stats.sem(out, axis=0))
+
     max_activity = np.amax(np.stack(nmax, axis=0), axis=0)
     active = max_activity >= thresh
     print(f'{np.sum(active)} neurons active')
 
     data_dict['mean'] = mean
     data_dict['sem'] = sem
+    data_dict['mean_out'] = mean_out
+    data_dict['sem_out'] = sem_out
     ix_dict = dict(active=active)
     return ix_dict, data_dict
 
@@ -132,6 +137,8 @@ def analyze_EI_network(opts, weight_dict, ix_dict):
     nE = int(opts.percent_E * opts.rnn_size)
     E = np.arange(opts.rnn_size) < nE
     active = ix_dict['active']
+    ix_dict['E'] = E
+    ix_dict['I'] = ~E
 
     E_ix = active & E
     I_ix = active & (~E)
@@ -151,29 +158,33 @@ def analyze_EI_network(opts, weight_dict, ix_dict):
     return weight_dict, ix_dict
 
 
-def simple_network_analysis(opts, plot_path, eval=False):
+def simple_network_analysis(opts, plot_path, plot=True, eval=False):
     if not os.path.exists(plot_path):
         os.mkdir(plot_path)
 
     opts, data_loader, net = _initialize(opts, reload=True, set_seed=False)
     weight_dict = get_weights(net, opts)
     data_dict = get_data(opts, eval)
-    task_phase_ix = analysis_helper.cumulative_time_dict(opts)
-    trial_type, trial_ix_dict, color_dict = analysis_helper.determine_trial_type(data_dict['x'], task_phase_ix)
+    phase_ix_dict = analysis_helper.cumulative_time_dict(opts)
+    trial_type, trial_ix_dict, color_dict = analysis_helper.determine_trial_type(data_dict['x'], phase_ix_dict)
     data_dict['trial_type'] = trial_type
     data_dict['trial_ix_dict'] = trial_ix_dict
     data_dict['color_dict'] = color_dict
-    data_dict['task_phase_ix'] = task_phase_ix
+    data_dict['phase_ix_dict'] = phase_ix_dict
+    data_dict['phase_ix_list'] = [phase_ix_dict['sample'], phase_ix_dict['delay'],
+                             phase_ix_dict['test'], phase_ix_dict['response']]
 
     ix_dict, data_dict = get_active_neurons(data_dict, thresh=.1)
 
-    # plot_performance(data_dict, plot_path)
-    # plot_activity(data_dict, ix_dict, plot_path)
-    # plot_unsorted_weights(weight_dict, ix_dict, plot_path)
+    if plot:
+        plot_performance(data_dict, plot_path)
+        plot_activity(data_dict, ix_dict, plot_path)
+        plot_unsorted_weights(weight_dict, ix_dict, plot_path)
 
     if opts.mode[-2:] == 'EI':
         weight_dict, ix_dict = analyze_EI_network(opts, weight_dict, ix_dict)
-        plot_EI_activity(data_dict, ix_dict, plot_path)
+        if plot:
+            plot_EI_activity(data_dict, ix_dict, plot_path)
 
     # save_path = os.path.join(opts.save_path, 'analysis')
     # if not os.path.exists(save_path):
@@ -192,4 +203,4 @@ if __name__ == '__main__':
     plot_path = './_FIGURES/XJW_EI'
     opts = config.load_config(save_path, 'XJW_EI')
     opts.save_path = save_path
-    simple_network_analysis(opts, plot_path)
+    simple_network_analysis(opts, plot_path, False)

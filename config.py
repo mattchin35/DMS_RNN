@@ -29,7 +29,6 @@ class inputConfig(BaseConfig):
         self.dt = .02
         self.decay = True
         self.activation_fn = 'relu'
-        self.dt = .02
         self.fixation = True
 
 

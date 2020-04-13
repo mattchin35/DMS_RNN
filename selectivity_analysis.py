@@ -1,5 +1,6 @@
 import matplotlib as mpl
 mpl.use('TkAgg')
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import ranksums
 import os
@@ -9,12 +10,12 @@ import config
 
 
 def get_selectivity_data(data_dict, ix_dict, opts):
-    phase_ix, trial_type = data_dict['task_phase_ix'], data_dict['trial_type']
+    phase_ix_dict, trial_type = data_dict['phase_ix_dict'], data_dict['trial_type']
     if opts.mode[:3] == 'XJW':
         h = data_dict['r']  # use the firing rates, not current
     else:
         h = data_dict['h']
-    return h, phase_ix, trial_type, ix_dict['active']
+    return h, phase_ix_dict, trial_type, ix_dict['active']
 
 
 def test_selectivity(data_dict, ix_dict, opts, cutoff=.05):
@@ -44,6 +45,16 @@ def sample_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     a_sample_means = sample_mean[asample]
     b_sample_means = sample_mean[bsample]
 
+    # f, ax = plt.subplots(2,1)
+    # ix = np.mean(a_sample_means, axis=0) > np.mean(b_sample_means, axis=0)
+    # a = (np.mean(a_sample_means, axis=0) - np.mean(b_sample_means, axis=0))[ix]
+    # ax[0].hist(a, bins=20)
+    # ix = np.mean(a_sample_means, axis=0) < np.mean(b_sample_means, axis=0)
+    # a = (np.mean(b_sample_means, axis=0) - np.mean(a_sample_means, axis=0))[ix]
+    # ax[1].hist(a, bins=20)
+    # f.savefig('./_FIGURES/sample_thresh_plot', bbox_inches='tight', figsize=(14, 10), dpi=500, format='pdf')
+    # plt.close(f)
+
     a_sample_selective, b_sample_selective, sample_stat, sample_pval = \
         determine_ranksum_selectivity(a_sample_means, b_sample_means, alpha=.05)
 
@@ -72,22 +83,38 @@ def memory_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     return a_memory_selective & active, b_memory_selective & active, stat, pval
 
 
+def selectivity_helper(mean, x_ix, y_ix, active_ix, cutoff=.05, alpha=.05):
+    x_means = mean[x_ix]
+    y_means = mean[y_ix]
+
+    match_selective, nonmatch_selective, stat, pval = \
+        determine_ranksum_selectivity(x_means, y_means, alpha)
+
+    phase_active = np.amax(mean, axis=0) > cutoff
+    active = active_ix & phase_active
+
+    return match_selective & active, nonmatch_selective & active, stat, pval
+
+
 def choice_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     h, phase_ix, trial_type, active = get_selectivity_data(data_dict, ix_dict, opts)
-    choice_mean = np.mean(h[:, phase_ix['response']:, :], axis=1)  # N x D
+    response_choice_mean = np.mean(h[:, int(phase_ix['response'] + .5 / opts.dt):, :], axis=1)  # N x D
+    test_choice_mean = np.mean(h[:, phase_ix['test']:phase_ix['response'], :], axis=1)  # N x D
 
     match = (trial_type == 0) | (trial_type == 2)
     nonmatch = ~match
-    match_means = choice_mean[match]
-    nonmatch_means = choice_mean[nonmatch]
 
-    match_selective, nonmatch_selective, stat, pval = \
-        determine_ranksum_selectivity(match_means, nonmatch_means, alpha=.05)
+    resp_match_selective, resp_nonmatch_selective, r_stat, r_pval = \
+        selectivity_helper(response_choice_mean, match, nonmatch, active)
+    test_match_selective, test_nonmatch_selective, tc_stat, tc_pval = \
+        selectivity_helper(test_choice_mean, match, nonmatch, active)
+    test_match_selective = test_match_selective & ~resp_match_selective
+    test_nonmatch_selective = test_nonmatch_selective & ~resp_nonmatch_selective
 
-    phase_active = np.amax(choice_mean, axis=0) > cutoff
-    active = active & phase_active
-
-    return match_selective & active, nonmatch_selective & active, stat, pval
+    return (resp_match_selective, test_match_selective), \
+           (resp_nonmatch_selective, test_nonmatch_selective), \
+           (r_stat, tc_stat), \
+           (r_pval, tc_pval)
 
 
 def trial_type_selectivity(a_test_selective, b_test_selective, data_dict, ix_dict, opts):
@@ -167,13 +194,17 @@ def selectivity_analysis(opts):
     # match/nonmatch and trial type tuning
     match_selective, nonmatch_selective, choice_stat, choice_pval = \
         choice_selectivity(data_dict, ix_dict, opts)
+    resp_match_selective, test_match_selective = match_selective
+    resp_nonmatch_selective, test_nonmatch_selective = nonmatch_selective
+    r_stat, tc_stat = choice_stat
+    r_pval, tc_pval = choice_pval
 
     aa_selective, ab_selective, bb_selective, ba_selective, tt_stat, tt_pval = \
         trial_type_selectivity(a_test_selective, b_test_selective, data_dict, ix_dict, opts)
 
     odor = odor_a_selective | odor_b_selective
     trial_type = aa_selective | ab_selective | bb_selective | ba_selective
-    choice = match_selective | nonmatch_selective
+    choice = resp_match_selective | resp_nonmatch_selective
     memory = a_memory_selective | b_memory_selective
     sample = a_sample_selective | b_sample_selective
     test = a_test_selective | b_test_selective
@@ -188,17 +219,21 @@ def selectivity_analysis(opts):
              ab_selective=ab_selective,
              bb_selective=bb_selective,
              ba_selective=ba_selective,
-             match_selective=match_selective,
-             nonmatch_selective=nonmatch_selective,
+             match_selective=resp_match_selective,
+             nonmatch_selective=resp_nonmatch_selective,
+                   test_match_selective=test_match_selective,
+                   test_nonmatch_selective=test_nonmatch_selective,
              a_memory_selective=a_memory_selective,
              b_memory_selective=b_memory_selective,
-             active=ix_dict['active'],
              odor=odor,
              trial_type=trial_type,
              choice=choice,
              memory=memory,
              sample=sample,
-             test=test)
+             test=test,
+                   active=ix_dict['active'],
+                   E=ix_dict['E'],
+                   I=ix_dict['I'])
 
     count_dict = dict()
     for k, v in ix_dict.items():
@@ -218,8 +253,7 @@ def plot_selectivity(plot_path):
     ix_dict = save_dict['ix']
 
     mean, sem = data_dict['mean'], data_dict['sem']
-    color_dict, phase_ix = data_dict['color_dict'], data_dict['task_phase_ix']
-    phase_ix = [phase_ix['sample'], phase_ix['delay'], phase_ix['test'], phase_ix['response']]
+    color_dict, phase_ix = data_dict['color_dict'], data_dict['phase_ix_list']
 
     categories = ['a_test_selective', 'b_test_selective', 'a_sample_selective', 'b_sample_selective',
      'odor_a_selective', 'odor_b_selective', 'aa_selective', 'ab_selective', 'bb_selective', 'ba_selective',
