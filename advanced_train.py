@@ -155,13 +155,82 @@ def evaluate(modelConfig, log):
     return logger
 
 
+def lesion_exp(modelConfig, log):
+    print("Starting testing...")
+
+    opts, data_loader, net = _initialize(modelConfig, reload=True, set_seed=False, test=True)
+    logger = defaultdict(list)
+
+    with open(os.path.join(opts.save_path, 'analysis.pkl'), 'rb') as f:
+        save_dict = pkl.load(f)
+
+    ix_dict = save_dict['ix']
+    data_dict = save_dict['data']
+    phase_ix_dict = data_dict['phase_ix_dict']
+
+    t_lesion_st = phase_ix_dict['test']
+    t_lesion_end = phase_ix_dict['response']
+
+    # what is the key inhibition? A/B test selective, A/B delay, dA/tB and dB/tA
+    tA = ix_dict['a_test_selective']
+    tB = ix_dict['b_test_selective']
+    dA = ix_dict['a_memory_selective']
+    dB = ix_dict['b_memory_selective']
+    dAtB = ix_dict['dAtB']
+    dBtA = ix_dict['dBtA']
+    dAtA = dA & tA
+    dBtB = dB & tB
+    dA = ix_dict['dA']
+    dB = ix_dict['dB']
+    I = ix_dict['I']
+    E = ix_dict['E']
+    tm = ix_dict['test_match_selective']
+    m = ix_dict['match_selective']
+
+    for x, y in data_loader:
+        hidden = (net.initialZeroState(), net.initialZeroState())
+        xs, ys, youts, hs, rs = [], [], [], [], []
+        for t in range(x.shape[1]):
+            xt = torch.Tensor(x[:,t,:])
+            yt = torch.Tensor(y[:,t,:])
+
+            if t_lesion_st <= t < t_lesion_end:
+                hidden, out = net.lesion(xt, hidden, ix=dBtA & I)
+                # hidden, out = net.stimulate(xt, hidden, ix=dAtB & I)
+            else:
+                hidden, out = net(xt, hidden)
+
+            ht, rt = hidden
+            xs.append(torch2numpy(xt))
+            ys.append(torch2numpy(yt))
+            youts.append(torch2numpy(out))
+            hs.append(torch2numpy(ht))
+            rs.append(torch2numpy(rt))
+
+        logger['x'] = np.array(xs)
+        logger['y'] = np.array(ys)
+        logger['y_out'] = np.array(youts)
+        logger['h'] = np.array(hs)
+        logger['r'] = np.array(rs)
+        break
+
+    for k, v in logger.items():
+        logger[k] = np.stack(v, axis=1)
+
+    if log:
+        with open(os.path.join(opts.save_path, 'lesion_log.pkl'), 'wb') as f:
+            pkl.dump(logger, f)
+    return logger
+
+
 if __name__ == "__main__":
     # c = config.XJWModelConfig()
     c = config.XJW_EIConfig()
     # c = config.load_config(c.save_path)
-    c.clip_gradient = True
-    c.vanishing_gradient_mult = 0
-    c.trial_time['delay'] = .5
+    # c.clip_gradient = True
+    # c.vanishing_gradient_mult = 0
+    # c.trial_time['delay'] = .5
     c.epoch = 500
-    train(c, reload=c.reload, set_seed=True)
-    evaluate(c, log=True)
+    # train(c, reload=c.reload, set_seed=True)
+    # evaluate(c, log=True)
+    lesion_exp(c, log=True)

@@ -31,6 +31,44 @@ def determine_trial_type(X, cumul_time):
     return trial_type, trial_dict, color_dict
 
 
+def make_performance_plot(data, phase_ix, plot_path, plot_name='', suptitle='', pdf=False):
+    fig, ax = plt.subplots(nrows=4, ncols=1)
+    ax = np.ravel(ax, order='C')
+    subtitles = ('AA', 'AB', 'BB', 'BA')
+    linewidth = .5
+    labels = ['output', 'target']
+    ylim = [-.1, 2.1]
+    xlim = [0,len(data[0][0])]
+
+    for i, (cur_axis, d) in enumerate(zip(ax, data)):
+        for j, _d in enumerate(d):
+            cur_axis.plot(_d, lw=linewidth, label=labels[j])
+
+        for p in phase_ix:
+            cur_axis.plot([p, p], ylim, linewidth=.5, color='k', linestyle='dashed')
+
+        cur_axis.set_title(subtitles[i])
+        cur_axis.set_xlim(xlim[0], xlim[1])
+        cur_axis.set_ylim(ylim[0], ylim[1])
+        utils.hide_axis_ticks(cur_axis)
+
+
+    ax[-1].legend()
+    ax[-1].set_yticks([0,1,2])
+    ax[-1].set_yticklabels(['match', 'nonmatch', 'fixation'])
+    plt.suptitle(suptitle)
+    plt.tight_layout()
+    if not os.path.exists(plot_path):
+        os.mkdir(plot_path)
+
+    figname = os.path.join(plot_path, plot_name)
+    if pdf:
+        plt.savefig(os.path.join(figname + '.pdf'), transparent=True)
+    else:
+        fig.savefig(figname + '.png', bbox_inches='tight', figsize=(3, 2), dpi=500)
+    plt.close('all')
+
+
 def make_activity_plot(mean, sem, color_dict, phase_ix, plot_path, plot_name='neural_activity'):
     T, D = mean[0].shape
     bnd = np.amax(mean) * .05

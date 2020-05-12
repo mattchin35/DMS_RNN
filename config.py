@@ -47,7 +47,7 @@ class baseModelConfig(inputConfig):
 
         self.learning_rate = .001
         self.batch_size = 20
-        self.test_batch_size = 100
+        self.test_batch_size = 200
         self.epoch = 200
         self.time_loss_start = 5
         self.time_loss_end = 20
@@ -61,6 +61,9 @@ class baseModelConfig(inputConfig):
 
         self.debug_weights = False
         self.clip_gradient = False
+
+        self.t_lesion_start = 3
+        self.t_lesion_end = 3.5
 
 
 class oneLayerModelConfig(baseModelConfig):

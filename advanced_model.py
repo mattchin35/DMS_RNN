@@ -99,3 +99,40 @@ class XJW_EI(Abstract_Model):
 
     def initialZeroState(self):
         return torch.zeros(self.batch_size, self.hidden_size)
+
+    def lesion(self, input, hidden, ix):
+        hprev, rate_prev = hidden
+        i = torch.matmul(input, torch.abs(self.i2h))
+
+        _h_effective = torch.abs(torch.mul(self.h_w, self.h_mask))
+        h_effective = torch.matmul(self.ei_mask, _h_effective)
+        h_effective[ix.tolist(),:] *= 0
+
+        hrec = torch.matmul(rate_prev, h_effective)
+        noise = self.config.network_noise * torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
+        ht = hprev * (1. - self.config.dt / self.config.tau) + \
+                 (i + hrec + self.h_b + noise) * self.config.dt / self.config.tau
+        rt = torch.relu(ht)
+
+        h2o_effective = torch.matmul(self.ei_mask, torch.abs(self.h2o_w))
+        out = torch.matmul(rt, h2o_effective) + self.h2o_b
+        return (ht, rt), out
+
+    def stimulate(self, input, hidden, ix):
+        hprev, rate_prev = hidden
+        i = torch.matmul(input, torch.abs(self.i2h))
+
+        _h_effective = torch.abs(torch.mul(self.h_w, self.h_mask))
+        h_effective = torch.matmul(self.ei_mask, _h_effective)
+        rate_prev[:, ix.tolist()] = .5
+
+        hrec = torch.matmul(rate_prev, h_effective)
+        noise = self.config.network_noise * \
+                torch.normal(mean=torch.zeros(self.batch_size, self.hidden_size))
+        ht = hprev * (1. - self.config.dt / self.config.tau) + \
+                 (i + hrec + self.h_b + noise) * self.config.dt / self.config.tau
+        rt = torch.relu(ht)
+
+        h2o_effective = torch.matmul(self.ei_mask, torch.abs(self.h2o_w))
+        out = torch.matmul(rt, h2o_effective) + self.h2o_b
+        return (ht, rt), out

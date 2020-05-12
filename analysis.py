@@ -44,16 +44,18 @@ def get_data(opts, eval):
     return logger
 
 
-def plot_performance(data_dict, plot_path):
+def plot_performance(data_dict, plot_path, plot_name=''):
     labels, output, trial_type = data_dict['y'], data_dict['y_out'], data_dict['trial_type']
+    phase_ix = data_dict['phase_ix_list']
 
     # find a trial for each trial type
     ix = [np.nonzero(trial_type == i)[0][0] for i in range(4)]
     data = [(np.argmax(output[i], axis=1), np.argmax(labels[i], axis=1)) for i in ix]
-
-    plot_name = 'performance'
-    utils.subplot_easy(data, 1, plot_path, plot_name, subtitles=('AA', 'AB', 'BB', 'BA'),
-                       tight_layout=True, linewidth=.5, hide_ticks=True, ylim=[-.1,2.1])
+    if plot_name:
+        plot_name += '_performance'
+    else:
+        plot_name = 'performance'
+    analysis_helper.make_performance_plot(data, phase_ix, plot_path, plot_name, pdf=False)
 
 
 def plot_unsorted_weights(data_dict, ix_dict, plot_path):
@@ -82,7 +84,9 @@ def plot_activity(data_dict, ix_dict, plot_path):
                                        phase_ix, plot_path, plot_name='inactive_neural_activity')
 
 
-def plot_EI_activity(data_dict, ix_dict, plot_path):
+def plot_EI_activity(data_dict, ix_dict, plot_path, plot_name=''):
+    if plot_name:
+        plot_name += '_'
     mean, sem = data_dict['mean'], data_dict['sem']
     color_dict, phase_ix = data_dict['color_dict'], data_dict['phase_ix_list']
     E_ix = ix_dict['E_ix']
@@ -93,30 +97,35 @@ def plot_EI_activity(data_dict, ix_dict, plot_path):
 
     E_mean = [m[:,E_ix] for m in mean]
     E_sem = [s[:,E_ix] for s in sem]
-    analysis_helper.make_activity_plot(E_mean, E_sem, color_dict, phase_ix, plot_path, plot_name='E_activity')
+    analysis_helper.make_activity_plot(E_mean, E_sem, color_dict, phase_ix, plot_path,
+                                       plot_name=plot_name+'E_activity')
 
     I_mean = [m[:, I_ix] for m in mean]
     I_sem = [s[:, I_ix] for s in sem]
-    analysis_helper.make_activity_plot(I_mean, I_sem, color_dict, phase_ix, plot_path, plot_name='I_activity')
+    analysis_helper.make_activity_plot(I_mean, I_sem, color_dict, phase_ix, plot_path,
+                                       plot_name=plot_name+'I_activity')
 
 
 def get_active_neurons(data_dict, thresh=.05):
-    if opts.mode[:3] == 'XJW':
-        h = data_dict['r']  # use the firing rates, not current
-    else:
-        h = data_dict['h']
+    r = data_dict['r']  # use the firing rates, not current
+    h = data_dict['h']
     print("Max activity:", np.amax(h))
 
     # collect the average activity for each neuron for each trial type
     trial_type = data_dict['trial_type']
     mean, nmax, sem = [], [], []
+    hmean, hsem = [], []
     mean_out, sem_out = [], []
     for i in range(4):
-        tt = h[trial_type == i]
-        out = data_dict['y_out'][trial_type == i]
-        mean.append(np.mean(tt, axis=0))
-        sem.append(sp.stats.sem(tt, ddof=0, axis=0))
+        rtt = r[trial_type == i]
+        htt = h[trial_type == i]
+        mean.append(np.mean(rtt, axis=0))
+        sem.append(sp.stats.sem(rtt, ddof=0, axis=0))
+        hmean.append(np.mean(htt, axis=0))
+        hsem.append(sp.stats.sem(htt, ddof=0, axis=0))
         nmax.append(np.amax(mean[-1], axis=0))
+
+        out = data_dict['y_out'][trial_type == i]
         mean_out.append(np.mean(out, axis=0))
         sem_out.append(sp.stats.sem(out, axis=0))
 
@@ -126,6 +135,8 @@ def get_active_neurons(data_dict, thresh=.05):
 
     data_dict['mean'] = mean
     data_dict['sem'] = sem
+    data_dict['hmean'] = hmean
+    data_dict['hsem'] = hsem
     data_dict['mean_out'] = mean_out
     data_dict['sem_out'] = sem_out
     ix_dict = dict(active=active)
@@ -186,12 +197,41 @@ def simple_network_analysis(opts, plot_path, plot=True, eval=False):
         if plot:
             plot_EI_activity(data_dict, ix_dict, plot_path)
 
-    # save_path = os.path.join(opts.save_path, 'analysis')
-    # if not os.path.exists(save_path):
-    #     os.mkdir(save_path)
+    if not os.path.exists(opts.save_path):
+        os.mkdir(save_path)
     save_dict = dict(data=data_dict, weights=weight_dict, ix=ix_dict)
     with open(os.path.join(opts.save_path, 'analysis.pkl'), 'wb') as f:
         pkl.dump(save_dict, f)
+
+
+def lesion_analysis(opts, plot_path, plot=True, eval=False):
+    if not os.path.exists(plot_path):
+        os.mkdir(plot_path)
+
+    fname = os.path.join(opts.save_path, 'lesion_log.pkl')
+    if eval or not os.path.exists(fname):
+        advanced_train.lesion_exp(opts, log=True)
+
+    with open(fname, 'rb') as f:
+        lesion_dict = pkl.load(f)
+    with open(os.path.join(opts.save_path, 'analysis.pkl'), 'rb') as f:
+        save_dict = pkl.load(f)
+
+    ix_dict = save_dict['ix']
+    data_dict = save_dict['data']
+    trial_type, trial_ix_dict, color_dict = analysis_helper.determine_trial_type(lesion_dict['x'],
+                                                                                 data_dict['phase_ix_dict'])
+    lesion_dict['trial_type'] = trial_type
+    lesion_dict['phase_ix_list'] = data_dict['phase_ix_list']
+    _, lesion_dict = get_active_neurons(lesion_dict)
+
+    if plot:
+        plot_performance(lesion_dict, plot_path, plot_name='dBtA_i_lesion')
+        # plot_activity(data_dict, ix_dict, plot_path)
+        # plot_EI_activity(lesion_dict, ix_dict, plot_path, plot_name='lesion')
+
+    with open(os.path.join(opts.save_path, 'lesion_analysis.pkl'), 'wb') as f:
+        pkl.dump(lesion_dict, f)
 
 
 if __name__ == '__main__':
@@ -199,8 +239,10 @@ if __name__ == '__main__':
     if not os.path.exists(root + '_FIGURES'):
         os.mkdir(root + '_FIGURES')
 
-    save_path = './_DATA/XJW_EI'
-    plot_path = './_FIGURES/XJW_EI'
-    opts = config.load_config(save_path, 'XJW_EI')
+    mode = 'XJW_EI'
+    save_path = './_DATA/' + mode
+    plot_path = './_FIGURES/' + mode
+    opts = config.load_config(save_path, mode)
     opts.save_path = save_path
-    simple_network_analysis(opts, plot_path, False)
+    # simple_network_analysis(opts, plot_path, False)
+    lesion_analysis(opts, plot_path)

@@ -28,16 +28,18 @@ def test_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     b_test_means = test_mean[btest]
 
     a_test_selective, b_test_selective, test_stat, test_pval = \
-        determine_ranksum_selectivity(a_test_means, b_test_means, alpha=.05)
+        determine_ranksum_selectivity(a_test_means, b_test_means, alpha=.05, abs_thresh=.02)
 
     phase_active = np.amax(test_mean, axis=0) > cutoff
     active = active & phase_active
+    nonselective = ~a_test_selective & ~b_test_selective & active
 
-    return a_test_selective & active, b_test_selective & active, test_stat, test_pval
+    return a_test_selective & active, b_test_selective & active, nonselective
 
 
 def sample_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     h, phase_ix, trial_type, active = get_selectivity_data(data_dict, ix_dict, opts)
+    print(phase_ix['sample'],phase_ix['delay'], phase_ix['test'],phase_ix['response'])
     sample_mean = np.mean(h[:, phase_ix['sample']:phase_ix['delay'], :], axis=1)  # N x D
 
     asample = (trial_type == 0) | (trial_type == 1)
@@ -45,21 +47,11 @@ def sample_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     a_sample_means = sample_mean[asample]
     b_sample_means = sample_mean[bsample]
 
-    # f, ax = plt.subplots(2,1)
-    # ix = np.mean(a_sample_means, axis=0) > np.mean(b_sample_means, axis=0)
-    # a = (np.mean(a_sample_means, axis=0) - np.mean(b_sample_means, axis=0))[ix]
-    # ax[0].hist(a, bins=20)
-    # ix = np.mean(a_sample_means, axis=0) < np.mean(b_sample_means, axis=0)
-    # a = (np.mean(b_sample_means, axis=0) - np.mean(a_sample_means, axis=0))[ix]
-    # ax[1].hist(a, bins=20)
-    # f.savefig('./_FIGURES/sample_thresh_plot', bbox_inches='tight', figsize=(14, 10), dpi=500, format='pdf')
-    # plt.close(f)
-
     a_sample_selective, b_sample_selective, sample_stat, sample_pval = \
-        determine_ranksum_selectivity(a_sample_means, b_sample_means, alpha=.05)
+        determine_ranksum_selectivity(a_sample_means, b_sample_means, alpha=.05, abs_thresh=.02)
 
-    phase_active = np.amax(sample_mean, axis=0) > cutoff
-    active = active & phase_active
+    # phase_active = np.amax(sample_mean, axis=0) > cutoff
+    # active = active & phase_active
 
     return a_sample_selective & active, b_sample_selective & active, sample_stat, sample_pval
 
@@ -79,16 +71,17 @@ def memory_selectivity(data_dict, ix_dict, opts, cutoff=.05):
 
     phase_active = np.amax(mean, axis=0) > cutoff
     active = active & phase_active
+    nonselective = ~a_memory_selective & ~b_memory_selective & active
 
-    return a_memory_selective & active, b_memory_selective & active, stat, pval
+    return a_memory_selective & active, b_memory_selective & active, nonselective
 
 
-def selectivity_helper(mean, x_ix, y_ix, active_ix, cutoff=.05, alpha=.05):
+def selectivity_helper(mean, x_ix, y_ix, active_ix, cutoff=.05, alpha=.05, abs_thresh=.05):
     x_means = mean[x_ix]
     y_means = mean[y_ix]
 
     match_selective, nonmatch_selective, stat, pval = \
-        determine_ranksum_selectivity(x_means, y_means, alpha)
+        determine_ranksum_selectivity(x_means, y_means, alpha, abs_thresh=abs_thresh)
 
     phase_active = np.amax(mean, axis=0) > cutoff
     active = active_ix & phase_active
@@ -105,16 +98,14 @@ def choice_selectivity(data_dict, ix_dict, opts, cutoff=.05):
     nonmatch = ~match
 
     resp_match_selective, resp_nonmatch_selective, r_stat, r_pval = \
-        selectivity_helper(response_choice_mean, match, nonmatch, active)
+        selectivity_helper(response_choice_mean, match, nonmatch, active, cutoff, abs_thresh=.02)
     test_match_selective, test_nonmatch_selective, tc_stat, tc_pval = \
-        selectivity_helper(test_choice_mean, match, nonmatch, active)
+        selectivity_helper(test_choice_mean, match, nonmatch, active, cutoff, abs_thresh=.01)
     test_match_selective = test_match_selective & ~resp_match_selective
     test_nonmatch_selective = test_nonmatch_selective & ~resp_nonmatch_selective
 
     return (resp_match_selective, test_match_selective), \
-           (resp_nonmatch_selective, test_nonmatch_selective), \
-           (r_stat, tc_stat), \
-           (r_pval, tc_pval)
+           (resp_nonmatch_selective, test_nonmatch_selective)
 
 
 def trial_type_selectivity(a_test_selective, b_test_selective, data_dict, ix_dict, opts):
@@ -145,7 +136,7 @@ def trial_type_selectivity(a_test_selective, b_test_selective, data_dict, ix_dic
     tt_pval[ab_selective] = pvals[ab_selective]
     tt_pval[bb_selective] = pvals[bb_selective]
 
-    return aa_selective, ab_selective, bb_selective, ba_selective, tt_stat, tt_pval
+    return aa_selective, ab_selective, bb_selective, ba_selective
 
 
 def determine_ranksum_selectivity(x, y, alpha=.05, abs_thresh=.05):
@@ -182,25 +173,20 @@ def selectivity_analysis(opts):
     ix_dict = save_dict['ix']
 
     # odor selectivity
-    a_test_selective, b_test_selective, test_stat, test_pval = \
+    a_test_selective, b_test_selective, test_nonselective = \
         test_selectivity(data_dict, ix_dict, opts)
     a_sample_selective, b_sample_selective, sample_stat, sample_pval = \
         sample_selectivity(data_dict, ix_dict, opts)
     odor_a_selective = a_sample_selective & a_test_selective
     odor_b_selective = b_sample_selective & b_test_selective
-    a_memory_selective, b_memory_selective, memory_stat, memory_pval = \
-        memory_selectivity(data_dict, ix_dict, opts)
+    a_memory_selective, b_memory_selective, memory_nonselective = memory_selectivity(data_dict, ix_dict, opts)
 
     # match/nonmatch and trial type tuning
-    match_selective, nonmatch_selective, choice_stat, choice_pval = \
-        choice_selectivity(data_dict, ix_dict, opts)
+    match_selective, nonmatch_selective = choice_selectivity(data_dict, ix_dict, opts, cutoff=0.)
     resp_match_selective, test_match_selective = match_selective
     resp_nonmatch_selective, test_nonmatch_selective = nonmatch_selective
-    r_stat, tc_stat = choice_stat
-    r_pval, tc_pval = choice_pval
 
-    aa_selective, ab_selective, bb_selective, ba_selective, tt_stat, tt_pval = \
-        trial_type_selectivity(a_test_selective, b_test_selective, data_dict, ix_dict, opts)
+    aa_selective, ab_selective, bb_selective, ba_selective = trial_type_selectivity(a_test_selective, b_test_selective, data_dict, ix_dict, opts)
 
     odor = odor_a_selective | odor_b_selective
     trial_type = aa_selective | ab_selective | bb_selective | ba_selective
@@ -210,28 +196,37 @@ def selectivity_analysis(opts):
     test = a_test_selective | b_test_selective
 
     ix_dict = dict(a_test_selective=a_test_selective,
-             b_test_selective=b_test_selective,
-             a_sample_selective=a_sample_selective,
-             b_sample_selective=b_sample_selective,
-             odor_a_selective=odor_a_selective,
-             odor_b_selective=odor_b_selective,
-             aa_selective=aa_selective,
-             ab_selective=ab_selective,
-             bb_selective=bb_selective,
-             ba_selective=ba_selective,
-             match_selective=resp_match_selective,
-             nonmatch_selective=resp_nonmatch_selective,
+                   b_test_selective=b_test_selective,
+                   test_nonselective=test_nonselective,
+                   a_sample_selective=a_sample_selective,
+                   b_sample_selective=b_sample_selective,
+                   odor_a_selective=odor_a_selective,
+                   odor_b_selective=odor_b_selective,
+                   aa_selective=aa_selective,
+                   ab_selective=ab_selective,
+                   bb_selective=bb_selective,
+                   ba_selective=ba_selective,
+                   match_selective=resp_match_selective,
+                   nonmatch_selective=resp_nonmatch_selective,
                    test_match_selective=test_match_selective,
                    test_nonmatch_selective=test_nonmatch_selective,
-             a_memory_selective=a_memory_selective,
-             b_memory_selective=b_memory_selective,
-             odor=odor,
-             trial_type=trial_type,
-             choice=choice,
-             memory=memory,
-             sample=sample,
-             test=test,
+                   a_memory_selective=a_memory_selective,
+                   b_memory_selective=b_memory_selective,
+                   memory_nonselective=memory_nonselective,
+                   dAtA=a_memory_selective & a_test_selective,
+                   dBtB=b_memory_selective & b_test_selective,
+                   dAtB=a_memory_selective & b_test_selective,
+                   dBtA=b_memory_selective & a_test_selective,
+                   dA=a_memory_selective & ~(a_memory_selective & b_test_selective),
+                   dB=b_memory_selective & ~(b_memory_selective & a_test_selective),
+                   odor=odor,
+                   trial_type=trial_type,
+                   choice=choice,
+                   memory=memory,
+                   sample=sample,
+                   test=test,
                    active=ix_dict['active'],
+                   inactive=~ix_dict['active'],
                    E=ix_dict['E'],
                    I=ix_dict['I'])
 
@@ -239,6 +234,7 @@ def selectivity_analysis(opts):
     for k, v in ix_dict.items():
         count_dict[k] = np.sum(v)
         print(f'{np.sum(v)} {k} neurons')
+    ix_dict['counts'] = count_dict
 
     save_dict = dict(data=data_dict, weights=weight_dict, ix=ix_dict)
     with open(os.path.join(opts.save_path, 'analysis.pkl'), 'wb') as f:
@@ -255,14 +251,39 @@ def plot_selectivity(plot_path):
     mean, sem = data_dict['mean'], data_dict['sem']
     color_dict, phase_ix = data_dict['color_dict'], data_dict['phase_ix_list']
 
-    categories = ['a_test_selective', 'b_test_selective', 'a_sample_selective', 'b_sample_selective',
-     'odor_a_selective', 'odor_b_selective', 'aa_selective', 'ab_selective', 'bb_selective', 'ba_selective',
-     'match_selective', 'nonmatch_selective', 'a_memory_selective', 'b_memory_selective']
+    # categories = ['a_test_selective', 'b_test_selective', 'a_sample_selective', 'b_sample_selective',
+    #  'odor_a_selective', 'odor_b_selective', 'aa_selective', 'ab_selective', 'bb_selective', 'ba_selective',
+    #  'match_selective', 'nonmatch_selective', 'test_match_selective', 'test_nonmatch_selective',
+    #               'a_memory_selective', 'b_memory_selective', 'inactive']
+    # categories = ['match_selective', 'nonmatch_selective', 'test_match_selective', 'test_nonmatch_selective']
+    # categories = ['memory_nonselective', 'test_nonselective']
+    categories = ['dBtA', 'dAtB', 'test_match_selective','test_nonmatch_selective', 'match_selective',
+                  'nonmatch_selective']
 
     for c in categories:
         if np.sum(ix_dict[c]) > 0:
             me, se = [m[:, ix_dict[c]] for m in mean], [s[:, ix_dict[c]] for s in sem]
             analysis_helper.make_activity_plot(me, se, color_dict, phase_ix, plot_path, plot_name=c)
+
+
+def plot_lesion_selectivity(plot_path):
+    with open(os.path.join(save_path, 'analysis.pkl'), 'rb') as f:
+        save_dict = pkl.load(f)
+    with open(os.path.join(save_path, 'lesion_analysis.pkl'), 'rb') as f:
+        lesion_dict = pkl.load(f)
+
+    data_dict = save_dict['data']
+    ix_dict = save_dict['ix']
+
+    mean, sem = lesion_dict['mean'], lesion_dict['sem']
+    color_dict, phase_ix = data_dict['color_dict'], data_dict['phase_ix_list']
+
+    categories = ['match_selective', 'nonmatch_selective', 'test_match_selective', 'test_nonmatch_selective']
+    for c in categories:
+        if np.sum(ix_dict[c]) > 0:
+            me, se = [m[:, ix_dict[c]] for m in mean], [s[:, ix_dict[c]] for s in sem]
+            analysis_helper.make_activity_plot(me, se, color_dict, phase_ix, plot_path,
+                                               plot_name='lesion_'+c)
 
 
 if __name__ == '__main__':
@@ -278,5 +299,6 @@ if __name__ == '__main__':
 
     opts = config.load_config(save_path, mode)
     opts.save_path = save_path
-    selectivity_analysis(opts)
+    # selectivity_analysis(opts)
     plot_selectivity(plot_path)
+    # plot_lesion_selectivity(plot_path)
