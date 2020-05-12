@@ -5,6 +5,7 @@ import time
 import torch_model
 import os
 import pickle as pkl
+import config
 
 import numpy as np
 from datasets import inputs
@@ -45,8 +46,20 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
                 yt = torch.argmax(y[:,t,:], dim=1)
                 hidden, out = net(xt, hidden)
                 if t >= t_loss_start and t <= t_loss_end:
-                    loss_activity += opts.activity_alpha * torch.mean(torch.pow(hidden,2))
-                    loss_weight += opts.weight_alpha * torch.mean(torch.pow(net.h_w,2))
+                    if opts.mode == 'three_layer':
+                        h0, h1, h2 = hidden
+                        act_mean = torch.mean(torch.pow(h0, 2)) + torch.mean(torch.pow(h1, 2)) + torch.mean(
+                            torch.pow(h2, 2))
+                        weight_mean = torch.mean(torch.pow(net.i_to_h0, 2)) + torch.mean(torch.pow(net.h0_w, 2)) \
+                                      + torch.mean(torch.pow(net.h1_w, 2)) + torch.mean(torch.pow(net.h0_to_h1, 2)) \
+                                      + torch.mean(torch.pow(net.h2_w, 2)) + torch.mean(torch.pow(net.h1_to_h2, 2))
+                        loss_weight += opts.weight_alpha * weight_mean
+                    else:
+                        act_mean = torch.mean(torch.pow(hidden, 2))
+                        weight_mean = torch.mean(torch.pow(net.h_w,2))
+
+                    loss_activity += opts.activity_alpha * act_mean
+                    loss_weight += opts.weight_alpha * weight_mean
                     loss_pred += criterion(out, yt)
 
             loss = loss_pred + loss_weight + loss_activity
@@ -85,7 +98,7 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
             print('Time taken {:0.1f}s'.format(total_time))
             print('Examples/second {:.1f}'.format(pe / time_spent))
 
-        if np.mean(logger['loss'][-n_iter:]) < stop_crit:
+        if np.mean(logger['error_loss'][-n_iter:]) < stop_crit:
             print("Training criterion reached. Saving files...")
             net.save('net', cnt)
             net.save('net')
@@ -133,10 +146,11 @@ def evaluate(modelConfig, log):
 
 if __name__ == "__main__":
     # c = config.oneLayerModelConfig()
-    c = config.EIModelConfig()
-    c.trial_time['delay'] = .5
+    # c = config.EIModelConfig()
+    c = config.threeLayerModelConfig()
+    # c.trial_time['delay'] = .5
     c.clip_gradient = True
     c.epoch = 500
     # c = config.load_config(c.save_path)
     train(c, reload=c.reload, set_seed=True)
-    evaluate(c, log=True)
+    # evaluate(c, log=True)

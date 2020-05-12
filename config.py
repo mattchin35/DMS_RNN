@@ -110,10 +110,13 @@ class XJW_EIConfig(baseModelConfig):
 class threeLayerModelConfig(baseModelConfig):
     def __init__(self):
         super(threeLayerModelConfig, self).__init__()
-        self.rnn_size = [30, 30, 30]
+        # self.rnn_size = [80, 80, 80]
+        self.rnn_size = 80
         self.trainable = [True, True, True]
         self.save_path = './_DATA/three_layer'
         self.mode = 'three_layer'
+        self.px = .5
+        self.replicate_ashok = False
 
 
 class constrainedModelConfig(baseModelConfig):
