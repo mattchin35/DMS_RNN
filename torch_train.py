@@ -190,6 +190,7 @@ if __name__ == "__main__":
     # c = config.oneLayerModelConfig()
     # c = config.EIModelConfig()
     c = config.threeLayerModelConfig()
+    c.replicate_ashok = True
     # c.trial_time['delay'] = .5
     c.clip_gradient = True
     c.epoch = 500

@@ -215,7 +215,7 @@ class Three_Layer_Model(Abstract_Model):
         _h1 = torch.matmul(hidden[1], torch.mul(self.h1_w, self.h1_mask))
         h1 = hidden[1] * (1-tc) + torch.relu(i1 + _h1 + self.h1_b) * tc
 
-        i2 = torch.matmul(h0, h12)
+        i2 = torch.matmul(h1, h12)
         _h2 = torch.matmul(hidden[2], torch.mul(self.h2_w, self.h2_mask))
         h2 = hidden[2] * (1-tc) + torch.relu(i2 + _h2 + self.h2_b) * tc
 
@@ -243,63 +243,73 @@ class Three_Layer_EI(Abstract_Model):
         nE = int(opts.rnn_size * opts.percent_E)
         self.nE = nE
 
-        mask = torch.ones((isize, opts.rnn_size))
-        mask[nE:] = 0
-        self.i_to_h0_mask = torch.nn.Parameter(mask, requires_grad=False)
-
-        mask = torch.ones((isize, opts.rnn_size))
-        mask[nE:] = 0
-        self.interlayer_mask = torch.nn.Parameter((torch.rand(opts.rnn_size, opts.rnn_size) < opts.px).float(),
-                                                requires_grad=False)
-
         self.i_to_h0 = torch.nn.Parameter(.01 * torch.rand(isize, opts.rnn_size))
         self.h0_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-        self.h0_w = self.make_EI_weights(target, alpha, opts.rnn_size, nE)
+        self.h0_w = torch.nn.Parameter(self.make_EI_weights(target, alpha, opts.rnn_size, nE))
 
         self.h0_to_h1 = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size))
         self.h1_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-        self.h1_w = self.make_EI_weights(target, alpha, opts.rnn_size, nE)
+        self.h1_w = torch.nn.Parameter(self.make_EI_weights(target, alpha, opts.rnn_size, nE))
 
         self.h1_to_h2 = nn.Linear(isize, opts.rnn_size[2])
         self.h2_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-        self.h2_w = self.make_EI_weights(target, alpha, opts.rnn_size, nE)
+        self.h2_w = torch.nn.Parameter(self.make_EI_weights(target, alpha, opts.rnn_size, nE))
 
-        mask = (1 - np.eye(opts.rnn_size[0], opts.rnn_size[0])).astype(np.float32)
-        h0_mask = torch.nn.Parameter(torch.from_numpy(mask), requires_grad=False)
-        self.h0_mask = h0_mask
+        self.out_w = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, osize))
+        self.out_b = torch.nn.Parameter(.01 * torch.rand(osize))
 
-        mask = (1 - np.eye(opts.rnn_size[1], opts.rnn_size[1])).astype(np.float32)
-        h1_mask = torch.nn.Parameter(torch.from_numpy(mask), requires_grad=False)
-        self.h1_mask = h1_mask
+        mask = torch.ones((isize, opts.rnn_size))
+        mask[:, nE:] = 0
+        self.i_to_h0_mask = torch.nn.Parameter(mask, requires_grad=False)
 
-        mask = (1 - np.eye(opts.rnn_size[2], opts.rnn_size[2])).astype(np.float32)
-        h2_mask = torch.nn.Parameter(torch.from_numpy(mask), requires_grad=False)
-        self.h2_mask = h2_mask
+        mask = torch.ones((opts.rnn_size, opts.rnn_size))
+        mask[nE:] = 0
+        mask[:, nE:] = 0
+        self.interlayer_mask = torch.nn.Parameter(mask, requires_grad=False)
 
-        self.h2_to_o = torch.nn.Linear(opts.rnn_size[2], osize)
+        mask = (1 - np.eye(opts.rnn_size, opts.rnn_size)).astype(np.float32)
+        self.recurrent_mask = torch.nn.Parameter(torch.from_numpy(mask), requires_grad=False)
+
+        mask = torch.ones((opts.rnn_size, osize))
+        mask[nE:] = 0
+        self.out_mask = torch.nn.Parameter(mask, requires_grad=False)
+
+        mask = np.eye(opts.rnn_size).astype(np.float32)
+        mask[nE:] *= -1
+        self.ei_mask = torch.nn.Parameter(torch.from_numpy(mask), requires_grad=False)
 
     def make_EI_weights(self, target, alpha, rnn_size, nE):
         nI = rnn_size - nE
         E = np.random.gamma(shape=alpha, scale=target / (nE * alpha), size=[nE, self.opts.rnn_size])
         I = np.random.gamma(shape=alpha, scale=target / (nI * alpha), size=[nI, self.opts.rnn_size])
         EI = np.concatenate([E, I], axis=0).astype(np.float32)
-        return EI
+        return torch.from_numpy(EI)
 
     def forward(self, input, hidden):
-        i0 = self.i_to_h0(input)
-        _h0 = torch.matmul(hidden[0], torch.mul(self.h0_w, self.h0_mask))
-        h0 = torch.relu(i0 + _h0 + self.h0_b)
+        tc = self.opts.dt / self.opts.tau
 
-        i1 = self.h0_to_h1(h0)
-        _h1 = torch.matmul(hidden[1], torch.mul(self.h1_w, self.h1_mask))
-        h1 = torch.relu(i1 + _h1 + self.h1_b)
+        wi0 = torch.abs(self.i_to_h0 * self.i_to_h0_mask)
+        h01 = torch.abs(self.h0_to_h1 * self.interlayer_mask)
+        h12 = torch.abs(self.h1_to_h2 * self.interlayer_mask)
+        w2out = torch.abs(self.out_w * self.out_mask)
 
-        i2 = self.h1_to_h2(h1)
-        _h2 = torch.matmul(hidden[2], torch.mul(self.h2_w, self.h2_mask))
-        h2 = torch.relu(i2 + _h2 + self.h2_b)
+        h0_effective = torch.matmul(self.ei_mask, torch.abs(torch.mul(self.h0_w, self.recurrent_mask)))
+        i0 = torch.matmul(input, wi0)
+        _h0 = torch.matmul(hidden[0], h0_effective)
+        h0 = hidden[0] * (1-tc) + torch.relu(i0 + _h0 + self.h0_b) * tc
+
+        h1_effective = torch.matmul(self.ei_mask, torch.abs(torch.mul(self.h1_w, self.recurrent_mask)))
+        i1 = torch.matmul(h0, h01)
+        _h1 = torch.matmul(hidden[1], h1_effective)
+        h1 = hidden[1] * (1-tc) + torch.relu(i1 + _h1 + self.h1_b) * tc
+
+        h2_effective = torch.matmul(self.ei_mask, torch.abs(torch.mul(self.h2_w, self.recurrent_mask)))
+        i2 = torch.matmul(h1, h12)
+        _h2 = torch.matmul(hidden[2], h2_effective)
+        h2 = hidden[2] * (1-tc) + torch.relu(i2 + _h2 + self.h2_b) * tc
 
         hidden = (h0, h1, h2)
-        out = self.h2_to_o(h2)
+        out = torch.matmul(h2, w2out) + self.out_b
         return hidden, out
 
     def initialZeroState(self):
