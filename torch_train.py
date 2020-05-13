@@ -46,7 +46,7 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
                 yt = torch.argmax(y[:,t,:], dim=1)
                 hidden, out = net(xt, hidden)
                 if t >= t_loss_start and t <= t_loss_end:
-                    if opts.mode == 'three_layer':
+                    if opts.mode in ['three_layer', 'three_layer_EI']:
                         h0, h1, h2 = hidden
                         act_mean = torch.mean(torch.pow(h0, 2)) + torch.mean(torch.pow(h1, 2)) + torch.mean(
                             torch.pow(h2, 2))
@@ -189,8 +189,9 @@ def multilayer_evaluate(modelConfig, log):
 if __name__ == "__main__":
     # c = config.oneLayerModelConfig()
     # c = config.EIModelConfig()
-    c = config.threeLayerModelConfig()
-    c.replicate_ashok = True
+    # c = config.threeLayerModelConfig()
+    # c.replicate_ashok = True
+    c = config.threeLayerEIModelConfig()
     # c.trial_time['delay'] = .5
     c.clip_gradient = True
     c.epoch = 500

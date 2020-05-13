@@ -58,6 +58,8 @@ def _initialize(opts, reload, set_seed, test=False):
         net = advanced_model.XJW_EI(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
     elif opts.mode == 'three_layer':
         net = torch_model.Three_Layer_Model(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
+    elif opts.mode == 'three_layer_EI':
+        net = torch_model.Three_Layer_EI_Model(opts=opts, isize=dataset.X.shape[-1], osize=dataset.Y.shape[-1])
 
     net.model_config = opts
 

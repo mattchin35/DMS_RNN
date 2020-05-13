@@ -229,10 +229,10 @@ class Three_Layer_Model(Abstract_Model):
                torch.zeros(self.batch_size, self.rnn_size)
 
 
-class Three_Layer_EI(Abstract_Model):
+class Three_Layer_EI_Model(Abstract_Model):
     """3 layer RNN with EI and other constraints."""
     def __init__(self, opts, isize, osize):
-        super(Three_Layer_EI, self).__init__(opts.save_path)
+        super(Three_Layer_EI_Model, self).__init__(opts.save_path)
 
         self.hidden_size = opts.rnn_size
         self.batch_size = opts.batch_size
@@ -251,7 +251,7 @@ class Three_Layer_EI(Abstract_Model):
         self.h1_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
         self.h1_w = torch.nn.Parameter(self.make_EI_weights(target, alpha, opts.rnn_size, nE))
 
-        self.h1_to_h2 = nn.Linear(isize, opts.rnn_size[2])
+        self.h1_to_h2 = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size))
         self.h2_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
         self.h2_w = torch.nn.Parameter(self.make_EI_weights(target, alpha, opts.rnn_size, nE))
 
@@ -313,9 +313,9 @@ class Three_Layer_EI(Abstract_Model):
         return hidden, out
 
     def initialZeroState(self):
-        return torch.zeros(self.batch_size, self.hidden_size[0]), \
-               torch.zeros(self.batch_size, self.hidden_size[1]), \
-               torch.zeros(self.batch_size, self.hidden_size[2])
+        return torch.zeros(self.batch_size, self.hidden_size), \
+               torch.zeros(self.batch_size, self.hidden_size), \
+               torch.zeros(self.batch_size, self.hidden_size)
 
 
 class Constrained_Model(Abstract_Model):
