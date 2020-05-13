@@ -157,21 +157,21 @@ class Three_Layer_Model(Abstract_Model):
         self.batch_size = opts.batch_size
         self.opts = opts
 
-        self.i_to_h0 = torch.nn.Parameter(.01 * torch.rand(isize, opts.rnn_size))
+        self.i_to_h0 = torch.nn.Parameter(.01 * torch.randn(isize, opts.rnn_size))
         self.h0_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-        self.h0_w = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size),
+        self.h0_w = torch.nn.Parameter(.01 * torch.randn(opts.rnn_size, opts.rnn_size),
                                        requires_grad=opts.trainable[0])
 
-        self.h0_to_h1 = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size),
+        self.h0_to_h1 = torch.nn.Parameter(.01 * torch.randn(opts.rnn_size, opts.rnn_size),
                                            requires_grad=not opts.replicate_ashok)
         self.h1_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-        self.h1_w = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size),
+        self.h1_w = torch.nn.Parameter(.01 * torch.randn(opts.rnn_size, opts.rnn_size),
                                        requires_grad=opts.trainable[1])
 
-        self.h1_to_h2 = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size),
+        self.h1_to_h2 = torch.nn.Parameter(.01 * torch.randn(opts.rnn_size, opts.rnn_size),
                                            requires_grad=not opts.replicate_ashok)
         self.h2_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
-        self.h2_w = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size),
+        self.h2_w = torch.nn.Parameter(.01 * torch.randn(opts.rnn_size, opts.rnn_size),
                                        requires_grad=opts.trainable[2])
 
         self.h0_to_h1_mask = torch.nn.Parameter((torch.rand(opts.rnn_size, opts.rnn_size) < opts.px).float(), \
@@ -230,7 +230,7 @@ class Three_Layer_Model(Abstract_Model):
 
 
 class Three_Layer_EI(Abstract_Model):
-    """3 layer RNN with EI constraints."""
+    """3 layer RNN with EI and other constraints."""
     def __init__(self, opts, isize, osize):
         super(Three_Layer_EI, self).__init__(opts.save_path)
 
@@ -241,17 +241,22 @@ class Three_Layer_EI(Abstract_Model):
         target = 2
         alpha = 2
         nE = int(opts.rnn_size * opts.percent_E)
-        nI = opts.rnn_size - nE
-        E = np.random.gamma(shape=alpha, scale=target / (nE * alpha), size=[nE, opts.rnn_size])
-        I = np.random.gamma(shape=alpha, scale=target / (nI * alpha), size=[nI, opts.rnn_size])
-        EI = np.concatenate([E, I], axis=0).astype(np.float32)
         self.nE = nE
 
-        self.i_to_h0 = nn.Linear(isize, opts.rnn_size)
+        mask = torch.ones((isize, opts.rnn_size))
+        mask[nE:] = 0
+        self.i_to_h0_mask = torch.nn.Parameter(mask, requires_grad=False)
+
+        mask = torch.ones((isize, opts.rnn_size))
+        mask[nE:] = 0
+        self.interlayer_mask = torch.nn.Parameter((torch.rand(opts.rnn_size, opts.rnn_size) < opts.px).float(),
+                                                requires_grad=False)
+
+        self.i_to_h0 = torch.nn.Parameter(.01 * torch.rand(isize, opts.rnn_size))
         self.h0_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
         self.h0_w = self.make_EI_weights(target, alpha, opts.rnn_size, nE)
 
-        self.h0_to_h1 = nn.Linear(isize, opts.rnn_size[1])
+        self.h0_to_h1 = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size, opts.rnn_size))
         self.h1_b = torch.nn.Parameter(.01 * torch.rand(opts.rnn_size))
         self.h1_w = self.make_EI_weights(target, alpha, opts.rnn_size, nE)
 
@@ -270,6 +275,7 @@ class Three_Layer_EI(Abstract_Model):
         mask = (1 - np.eye(opts.rnn_size[2], opts.rnn_size[2])).astype(np.float32)
         h2_mask = torch.nn.Parameter(torch.from_numpy(mask), requires_grad=False)
         self.h2_mask = h2_mask
+
         self.h2_to_o = torch.nn.Linear(opts.rnn_size[2], osize)
 
     def make_EI_weights(self, target, alpha, rnn_size, nE):

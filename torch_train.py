@@ -96,7 +96,7 @@ def train(modelConfig, reload, set_seed=True, stop_crit=5.0):
             total_time += time_spent
             start_time = time.time()
             print('Time taken {:0.1f}s'.format(total_time))
-            print('Examples/second {:.1f}'.format(pe / time_spent))
+            print('Examples/second {:.1f}'.format(pe * opts.n_input / time_spent))
 
         if np.mean(logger['error_loss'][-n_iter:]) < stop_crit:
             print("Training criterion reached. Saving files...")
@@ -124,6 +124,7 @@ def evaluate(modelConfig, log):
             xt = torch.Tensor(x[:,t,:])
             yt = torch.Tensor(y[:,t,:])
             hidden, out = net(xt, hidden)
+            # h0, h1, h2 = hidden
             xs.append(torch2numpy(xt))
             ys.append(torch2numpy(yt))
             youts.append(torch2numpy(out))
@@ -143,6 +144,47 @@ def evaluate(modelConfig, log):
         with open(os.path.join(opts.save_path, 'test_log.pkl'), 'wb') as f:
             pkl.dump(logger, f)
     return logger
+
+
+def multilayer_evaluate(modelConfig, log):
+    print("Starting testing...")
+
+    opts, data_loader, net = _initialize(modelConfig, reload=True, set_seed=False, test=True)
+    logger = defaultdict(list)
+
+    for x, y in data_loader:
+        hidden = net.initialZeroState()
+
+        xs, ys, youts, h0, h1, h2 = [], [], [], [], [], []
+        for t in range(x.shape[1]):
+            xt = torch.Tensor(x[:,t,:])
+            yt = torch.Tensor(y[:,t,:])
+            hidden, out = net(xt, hidden)
+            xs.append(torch2numpy(xt))
+            ys.append(torch2numpy(yt))
+            youts.append(torch2numpy(out))
+            h0.append(torch2numpy(hidden[0]))
+            h1.append(torch2numpy(hidden[1]))
+            h2.append(torch2numpy(hidden[2]))
+
+        logger['x'] = np.array(xs)
+        logger['y'] = np.array(ys)
+        logger['y_out'] = np.array(youts)
+        logger['h0'] = np.array(h0)
+        logger['h1'] = np.array(h1)
+        logger['h2'] = np.array(h2)
+        break
+
+    for k, v in logger.items():
+        logger[k] = np.stack(v, axis=1)
+
+    if log:
+        #batch, time, neuron
+        with open(os.path.join(opts.save_path, 'test_log.pkl'), 'wb') as f:
+            pkl.dump(logger, f)
+    return logger
+
+
 
 if __name__ == "__main__":
     # c = config.oneLayerModelConfig()
